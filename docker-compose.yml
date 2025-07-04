@@ -1,0 +1,88 @@
+# docker-compose.yml (Modo Desenvolvimento Estável)
+services:
+  mapoteca_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mapoteca_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - DATABASE_URL="postgresql://postgres:12345678@127.0.0.1:5432/mapoteca_db?schema=public"
+      - KAFKA_BROKER=kafka:29092
+      - INGESTION_SERVICE_URL=http://ingestao_app:3001
+    networks:
+      - minha-rede-app
+    depends_on:
+      - mapoteca_db_container
+      - ingestao_app
+      - kafka
+
+  ingestao_app:
+    build:
+      context: ../microservico-ingestao
+      dockerfile: Dockerfile
+    container_name: ingestao_app
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../microservico-ingestao:/app
+      - /app/node_modules
+    environment:
+      - KAFKA_BROKER=kafka:29092
+    networks:
+      - minha-rede-app
+    depends_on:
+      - kafka
+
+  mapoteca_db_container:
+    image: postgres:13-alpine
+    container_name: mapoteca_db_container
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_DB=mapoteca_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - mapoteca_db_data:/var/lib/postgresql/data
+    networks:
+      - minha-rede-app
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    networks:
+      - minha-rede-app
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    networks:
+      - minha-rede-app
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+networks:
+  minha-rede-app:
+    driver: bridge
+
+volumes:
+  mapoteca_db_data:
+  sip_storage:
