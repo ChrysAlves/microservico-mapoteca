@@ -1,4 +1,4 @@
-# docker-compose.yml (Modo Desenvolvimento Estável)
+# docker-compose.yml (Modo de Desenvolvimento Estável)
 services:
   mapoteca_app:
     build:
@@ -11,7 +11,7 @@ services:
       - .:/app
       - /app/node_modules
     environment:
-      - DATABASE_URL="postgresql://postgres:12345678@127.0.0.1:5432/mapoteca_db?schema=public"
+      - DATABASE_URL=postgresql://user:password@mapoteca_db_container:5432/mapoteca_db?schema=public
       - KAFKA_BROKER=kafka:29092
       - INGESTION_SERVICE_URL=http://ingestao_app:3001
     networks:
@@ -42,8 +42,8 @@ services:
     image: postgres:13-alpine
     container_name: mapoteca_db_container
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
       - POSTGRES_DB=mapoteca_db
     ports:
       - "5432:5432"
