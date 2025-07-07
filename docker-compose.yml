@@ -46,7 +46,7 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=mapoteca_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - mapoteca_db_data:/var/lib/postgresql/data
     networks:
