@@ -1,12 +1,12 @@
 // src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
   app.useGlobalPipes(new ValidationPipe());
 
   // Configuração do Swagger
@@ -18,8 +18,28 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  // --- MUDANÇA PRINCIPAL AQUI ---
+  // Conecta a aplicação como um consumidor de Kafka
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        // Acessa a variável de ambiente definida no docker-compose.yml
+        brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
+      },
+      consumer: {
+        groupId: 'mapoteca-results-consumer',
+      },
+    },
+  });
+
+  // Inicia todos os microserviços (o consumidor Kafka)
+  await app.startAllMicroservices();
+  // --- FIM DA MUDANÇA ---
   
   await app.listen(3000);
-  console.log(`Swagger UI disponível em ${await app.getUrl()}/api`);
+  console.log(`Mapoteca HTTP server está rodando em: ${await app.getUrl()}`);
+  console.log(`Mapoteca Kafka consumer está ouvindo por resultados...`);
 }
 bootstrap();

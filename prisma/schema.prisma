@@ -33,12 +33,14 @@ enum TipoPedido {
 
 enum StatusPedido {
   PENDING
-  RECEIVED_BY_INGESTION // Para upload
-  PROCESSING_STARTED    // Para upload
-  AIP_CREATED_TEMP      // Para upload
-  AIP_UPLOADED_TO_MINIO // Para upload
-  COMPLETED             // Para todos os tipos
-  FAILED                // Para todos os tipos
-  MARKED_FOR_DELETION   // Para delete
-  DELETED_FROM_MINIO    // Para delete
+  RECEIVED_BY_INGESTION
+  PROCESSING_STARTED
+  PROCESSED 
+  AIP_CREATED_TEMP
+  AIP_UPLOAD_ORDERED
+  AIP_UPLOADED_TO_MINIO
+  COMPLETED
+  FAILED
+  MARKED_FOR_DELETION
+  DELETED_FROM_MINIO
 }

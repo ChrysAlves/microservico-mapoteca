@@ -1,34 +1,24 @@
-// src/app.module.ts - VERSÃO FINAL E CORRETA
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-
-import { DatabaseModule } from './infra/database/database.module';
-import { PedidoRepository } from './domain/pedido/repository/pedido.repository';
-import { PrismaPedidoRepository } from './infra/database/prisma/repositories/prisma-pedido.repository';
-import { CriarPedidoUploadUseCase } from './domain/pedido/use-cases/criar-pedido-upload.use-case';
-import { IngestionClientService } from './infra/messaging/ingestion.client';
-import { MapotecaController } from './infra/controllers/mapoteca.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PedidoModule } from './domain/pedido/pedido.module';
+import { DatabaseModule } from './infra/database/database.module';
+import { MessagingModule } from './infra/messaging/messaging.module';
 
 @Module({
   imports: [
-    // O HttpModule foi removido pois não é mais injetado em lugar nenhum
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    HttpModule,
     DatabaseModule,
+    MessagingModule,
+    // Esta linha importa o PedidoModule, ganhando acesso aos seus exports
+    PedidoModule,
   ],
-  controllers: [
-    MapotecaController,
-    AppController,
-  ],
-  providers: [
-    AppService,
-    {
-      provide: PedidoRepository,
-      useClass: PrismaPedidoRepository,
-    },
-    IngestionClientService,
-    CriarPedidoUploadUseCase,
-  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

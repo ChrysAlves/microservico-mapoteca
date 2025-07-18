@@ -1,7 +1,7 @@
 // src/infra/messaging/ingestion.client.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import FormData = require('form-data'); // <-- A CORREÇÃO DEFINITIVA
+import FormData = require('form-data');
 import axios from 'axios';
 import type { Express } from 'express';
 
@@ -24,7 +24,7 @@ export class IngestionClientService {
     transferId: string,
     metadados: any,
   ): Promise<any> {
-    const formData = new FormData(); // Agora isso vai funcionar
+    const formData = new FormData(); 
     formData.append('transferId', transferId);
     formData.append('metadados', JSON.stringify(metadados));
 
