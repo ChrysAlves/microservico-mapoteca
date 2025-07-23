@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import FormData = require('form-data');
 import axios from 'axios';
 import type { Express } from 'express';
+import * as fs from 'fs'; // Importa o módulo de sistema de arquivos
 
 @Injectable()
 export class IngestionClientService {
@@ -24,12 +25,14 @@ export class IngestionClientService {
     transferId: string,
     metadados: any,
   ): Promise<any> {
-    const formData = new FormData(); 
+    const formData = new FormData();
     formData.append('transferId', transferId);
     formData.append('metadados', JSON.stringify(metadados));
 
     for (const file of files) {
-      formData.append('files', file.buffer, file.originalname);
+      // ALTERADO: Lê o arquivo do disco como um stream
+      const fileStream = fs.createReadStream(file.path);
+      formData.append('files', fileStream, file.originalname);
     }
 
     const ingestUrl = `${this.ingestionServiceUrl}/ingest`;
@@ -53,6 +56,14 @@ export class IngestionClientService {
         errorMessage = `${errorMessage}: ${error.message}`;
       }
       throw new InternalServerErrorException(errorMessage);
+    } finally {
+      for (const file of files) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (e) {
+          console.error(`Falha ao limpar arquivo temporário: ${file.path}`, e);
+        }
+      }
     }
   }
 }

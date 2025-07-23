@@ -1,4 +1,4 @@
-// src/domain/pedido/dtos/processing-complete.dto.ts (ATUALIZADO)
+// src/domain/pedido/dtos/processing-complete.dto.ts
 
 import { Type } from 'class-transformer';
 import { IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
@@ -10,13 +10,13 @@ export class ProcessingCompleteDto {
   transferId: string;
 
   @IsObject()
-  @ValidateNested() // Diz ao NestJS para validar o objeto aninhado também
+  @ValidateNested()
   @Type(() => ArquivoProcessadoDto)
   original: ArquivoProcessadoDto;
 
   @IsObject()
   @ValidateNested()
-  @IsOptional() // O arquivo de preservação pode não existir
+  @IsOptional()
   @Type(() => ArquivoProcessadoDto)
   preservacao?: ArquivoProcessadoDto;
 }

@@ -7,6 +7,11 @@ export class ArquivoProcessadoDto {
   @IsNotEmpty()
   nome: string;
 
+  // ADICIONADO: Campo para o nome original do arquivo
+  @IsString()
+  @IsOptional()
+  nomeOriginal?: string;
+
   @IsString()
   @IsNotEmpty()
   caminho: string;
@@ -18,4 +23,9 @@ export class ArquivoProcessadoDto {
   @IsString()
   @IsNotEmpty()
   formato: string;
+
+  // ADICIONADO: O campo que estava faltando para o caminho no Minio
+  @IsString()
+  @IsNotEmpty()
+  caminhoMinIO: string;
 }

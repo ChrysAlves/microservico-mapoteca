@@ -8,6 +8,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      - ./temp_uploads_mapoteca:/app/temp_uploads
       - sip_storage:/app/temp_ingestao_sip
       - aip_output:/app/output_normalizado
     environment:
