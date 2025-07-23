@@ -1,4 +1,5 @@
 // src/domain/pedido/use-cases/criar-pedido-upload.use-case.ts
+
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PedidoRepository } from '../repository/pedido.repository';
 import { Pedido } from '../entities/pedido.entity';
@@ -8,7 +9,7 @@ import { CriarPedidoUploadDto } from '../dtos/criar-pedido-upload.dto';
 import { IngestionClientService } from '../../../infra/messaging/ingestion.client';
 
 @Injectable()
-export class CriarPedidoUploadUseCase {
+export class CriarPedidoUploadUseCase { // A palavra 'export' deve estar aqui
   private readonly logger = new Logger(CriarPedidoUploadUseCase.name);
 
   constructor(
@@ -32,7 +33,7 @@ export class CriarPedidoUploadUseCase {
       tipo: TipoPedido.UPLOAD,
       status: StatusPedido.PENDING,
       origem: metadados.origem,
-      ra: metadados.ra, // ADICIONADO
+      ra: metadados.ra,
       solicitanteId: metadados.solicitanteId ?? null,
       nomeOriginal: files[0]?.originalname ?? null,
       metadadosIniciais: metadados.metadadosIniciais ?? null,
@@ -56,8 +57,6 @@ export class CriarPedidoUploadUseCase {
   ) {
     this.logger.log(`[BG] Iniciando envio para Ingestão para o pedido ${pedidoId}`);
     try {
-      // A chamada para o serviço de ingestão agora envia o objeto de metadados inteiro,
-      // que já contém o RA. O serviço de ingestão, por sua vez, o colocará na mensagem do Kafka.
       await this.ingestionClientService.sendFilesToIngestion(
         files,
         pedidoId,

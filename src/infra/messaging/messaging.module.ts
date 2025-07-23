@@ -1,19 +1,23 @@
+// src/infra/messaging/messaging.module.ts
+
 import { Module, forwardRef } from '@nestjs/common';
-import { Kafka, Producer } from 'kafkajs'; // 1. Importe as classes do KafkaJS
+import { Kafka, Producer } from 'kafkajs';
 import { ResultadosProcessamentoController } from '../resultados-processamento/resultados-processamento.controller';
 import { PedidoModule } from '../../domain/pedido/pedido.module';
+import { IngestionClientService } from './ingestion.client'; // 1. Importe o serviço
 
 @Module({
+  // O forwardRef está correto para evitar dependências circulares
   imports: [forwardRef(() => PedidoModule)], 
   controllers: [ResultadosProcessamentoController],
   providers: [
-    // 2. Crie um "provider" customizado para o nosso produtor Kafka
+    // 2. Adicione o IngestionClientService como um provider
+    IngestionClientService,
     {
-      provide: 'KAFKA_PRODUCER', // Um nome/token para identificar nosso produtor
+      provide: 'KAFKA_PRODUCER',
       useFactory: async (): Promise<Producer> => {
         const kafka = new Kafka({
           clientId: 'mapoteca-producer',
-          // Pega o endereço do broker do ambiente ou usa um padrão
           brokers: [process.env.KAFKA_BROKER || 'kafka:29092'],
         });
         const producer = kafka.producer();
@@ -22,7 +26,7 @@ import { PedidoModule } from '../../domain/pedido/pedido.module';
       },
     },
   ],
-  // 3. EXPORTE o provider para que outros módulos possam usá-lo
-  exports: ['KAFKA_PRODUCER'],
+  // 3. EXPORTE tanto o producer quanto o serviço
+  exports: ['KAFKA_PRODUCER', IngestionClientService],
 })
 export class MessagingModule {}
