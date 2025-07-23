@@ -3,31 +3,27 @@
 import { Injectable } from '@nestjs/common';
 import { PedidoRepository } from '../../../../domain/pedido/repository/pedido.repository';
 import { Pedido as PedidoEntity } from '../../../../domain/pedido/entities/pedido.entity';
-import { PrismaClient, StatusPedido, Prisma } from '@prisma/client'; // Importar PrismaClient
+import { StatusPedido, Prisma } from '@prisma/client';
 import { PrismaPedidoMapper } from '../mappers/prisma-pedido-mapper';
+import { PrismaService } from '../prisma.service'; // Importa o serviço central
 
 @Injectable()
 export class PrismaPedidoRepository implements PedidoRepository {
-  // !! MUDANÇA CRÍTICA: Instanciamos o PrismaClient diretamente !!
-  private prisma: PrismaClient;
-
-  constructor() {
-    // Em vez de receber via injeção, criamos a instância aqui.
-    // Isso ignora o sistema de DI do NestJS que está falhando.
-    this.prisma = new PrismaClient();
-  }
+  // CORRIGIDO: Recebemos o PrismaService via injeção de dependência
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(pedido: PedidoEntity): Promise<PedidoEntity> {
-    const rawPedido = await this.prisma.pedido.create({ // Agora this.prisma não será undefined
+    const rawPedido = await this.prisma.pedido.create({
       data: {
         tipo: pedido.tipo,
         status: pedido.status,
         origem: pedido.origem,
         solicitanteId: pedido.solicitanteId,
+        ra: pedido.ra,
         documentoId: pedido.documentoId,
         nomeOriginal: pedido.nomeOriginal,
         caminhoMinIO: pedido.caminhoMinIO,
-        metadadosIniciais: pedido.metadadosIniciais ?? Prisma.JsonNull,
+        metadadosIniciais: pedido.metadadosIniciais ?? null,
         mensagemErro: pedido.mensagemErro,
       },
     });
@@ -54,20 +50,10 @@ export class PrismaPedidoRepository implements PedidoRepository {
   }
 
   async save(pedido: PedidoEntity): Promise<PedidoEntity> {
-    const updateData = PrismaPedidoMapper.toPrisma(pedido);
+    const { id, createdAt, ...updateData } = PrismaPedidoMapper.toPrisma(pedido);
     const updatedPedido = await this.prisma.pedido.update({
       where: { id: pedido.id },
-      data: {
-        tipo: updateData.tipo,
-        status: updateData.status,
-        origem: updateData.origem,
-        solicitanteId: updateData.solicitanteId,
-        documentoId: updateData.documentoId,
-        nomeOriginal: updateData.nomeOriginal,
-        caminhoMinIO: updateData.caminhoMinIO,
-        metadadosIniciais: updateData.metadadosIniciais ?? Prisma.JsonNull,
-        mensagemErro: updateData.mensagemErro,
-      },
+      data: updateData,
     });
     return PrismaPedidoMapper.toDomain(updatedPedido);
   }

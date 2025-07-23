@@ -1,13 +1,11 @@
 // src/infra/controllers/mapoteca.controller.ts
-
 import { Controller, Post, Body, UploadedFiles, UseInterceptors, InternalServerErrorException, HttpStatus, HttpCode, BadRequestException } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CriarPedidoUploadUseCase } from '../../domain/pedido/use-cases/criar-pedido-upload.use-case';
-import { UploadRequestHttpDto } from '../http/dtos/upload-request.http.dto'; // DTO que acabamos de corrigir
+import { UploadRequestHttpDto } from '../http/dtos/upload-request.http.dto';
 import { Pedido } from '../../domain/pedido/entities/pedido.entity';
 import { ApiConsumes, ApiBody, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
-import type { Express } from 'express'; 
-
+import type { Express } from 'express';
 
 @ApiTags('Pedidos')
 @Controller('pedidos')
@@ -21,7 +19,7 @@ export class MapotecaController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Upload de arquivos e metadados.',
-    type: UploadRequestHttpDto, // Aponta para o nosso DTO explícito
+    type: UploadRequestHttpDto,
   })
   @ApiResponse({ status: 202, description: 'Pedido de upload recebido.' })
   @UseInterceptors(FilesInterceptor('files'))
@@ -34,7 +32,6 @@ export class MapotecaController {
       throw new BadRequestException('Nenhum arquivo enviado. O campo "files" é obrigatório.');
     }
     try {
-      // No DTO, metadadosIniciais pode vir como string, então fazemos o parse aqui
       const parsedBody = {
         ...body,
         metadadosIniciais: body.metadadosIniciais ? JSON.parse(body.metadadosIniciais) : undefined,

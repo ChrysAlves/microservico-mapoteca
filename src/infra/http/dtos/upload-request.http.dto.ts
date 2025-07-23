@@ -15,6 +15,10 @@ export class UploadRequestHttpDto {
   })
   files!: any[]; // <-- CORREÇÃO AQUI
 
+
+  @ApiProperty({ example: '1234567', description: 'Registro Acadêmico do aluno.' })
+  ra: string;
+
   @ApiProperty({
     description: 'Identificador da origem da requisição (ex: "frontend-web")',
     example: 'frontend-web',

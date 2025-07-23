@@ -9,18 +9,19 @@ datasource db {
 }
 
 model Pedido {
-  id              String    @id @default(uuid()) 
-  tipo            TipoPedido // Enum para identificar o tipo de pedido (UPLOAD, DOWNLOAD, DELETE, RENAME)
-  status          StatusPedido 
-  origem          String
-  solicitanteId   String? 
-  documentoId     String?
-  nomeOriginal    String? 
-  caminhoMinIO    String? 
-  metadadosIniciais Json? // Metadados enviados no pedido original
-  mensagemErro    String? 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String        @id @default(uuid())
+  tipo              TipoPedido
+  status            StatusPedido
+  origem            String
+  solicitanteId     String?
+  ra                String // ADICIONADO: Campo para o Registro Acadêmico
+  documentoId       String?
+  nomeOriginal      String?
+  caminhoMinIO      String?
+  metadadosIniciais Json?
+  mensagemErro      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 
@@ -35,7 +36,7 @@ enum StatusPedido {
   PENDING
   RECEIVED_BY_INGESTION
   PROCESSING_STARTED
-  PROCESSED 
+  PROCESSED
   AIP_CREATED_TEMP
   AIP_UPLOAD_ORDERED
   AIP_UPLOADED_TO_MINIO

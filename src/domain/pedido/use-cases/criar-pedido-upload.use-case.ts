@@ -1,10 +1,9 @@
-// src/domain/pedido/use-cases/criar-pedido-upload.use-case.ts (VERSÃO ASSÍNCRONA)
-
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+// src/domain/pedido/use-cases/criar-pedido-upload.use-case.ts
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PedidoRepository } from '../repository/pedido.repository';
 import { Pedido } from '../entities/pedido.entity';
 import { StatusPedido, TipoPedido } from '@prisma/client';
-import type { Express } from 'express'; 
+import type { Express } from 'express';
 import { CriarPedidoUploadDto } from '../dtos/criar-pedido-upload.dto';
 import { IngestionClientService } from '../../../infra/messaging/ingestion.client';
 
@@ -17,7 +16,6 @@ export class CriarPedidoUploadUseCase {
     private readonly ingestionClientService: IngestionClientService,
   ) {}
 
-  // Este método agora responde IMEDIATAMENTE
   async execute(
     payload: {
       files: Express.Multer.File[];
@@ -26,10 +24,15 @@ export class CriarPedidoUploadUseCase {
   ): Promise<Pedido> {
     const { files, metadados } = payload;
 
+    if (!metadados.ra) {
+      throw new BadRequestException('O campo "ra" é obrigatório.');
+    }
+
     const novoPedido = Pedido.create({
       tipo: TipoPedido.UPLOAD,
       status: StatusPedido.PENDING,
       origem: metadados.origem,
+      ra: metadados.ra, // ADICIONADO
       solicitanteId: metadados.solicitanteId ?? null,
       nomeOriginal: files[0]?.originalname ?? null,
       metadadosIniciais: metadados.metadadosIniciais ?? null,
@@ -41,16 +44,11 @@ export class CriarPedidoUploadUseCase {
     const pedidoSalvo = await this.pedidoRepository.create(novoPedido);
     this.logger.log(`[CriarPedidoUploadUseCase] Pedido ${pedidoSalvo.id} criado com status PENDING.`);
 
-    // **A MÁGICA ACONTECE AQUI**
-    // Chamamos o processo pesado, mas NÃO esperamos por ele com "await".
-    // Isso libera a requisição principal para responder ao usuário.
     this.iniciarProcessamentoEmBackground(files, metadados, pedidoSalvo.id);
 
-    // Retorna o pedido imediatamente para o controller, que responde ao Postman.
     return pedidoSalvo;
   }
 
-  // Este novo método executa em segundo plano (background)
   private async iniciarProcessamentoEmBackground(
     files: Express.Multer.File[],
     metadados: CriarPedidoUploadDto,
@@ -58,6 +56,8 @@ export class CriarPedidoUploadUseCase {
   ) {
     this.logger.log(`[BG] Iniciando envio para Ingestão para o pedido ${pedidoId}`);
     try {
+      // A chamada para o serviço de ingestão agora envia o objeto de metadados inteiro,
+      // que já contém o RA. O serviço de ingestão, por sua vez, o colocará na mensagem do Kafka.
       await this.ingestionClientService.sendFilesToIngestion(
         files,
         pedidoId,
