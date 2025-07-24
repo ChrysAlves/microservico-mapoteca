@@ -3,10 +3,21 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PedidoRepository } from '../repository/pedido.repository';
 import { Pedido } from '../entities/pedido.entity';
-import { StatusPedido, TipoPedido } from '@prisma/client';
 import type { Express } from 'express';
 import { CriarPedidoUploadDto } from '../dtos/criar-pedido-upload.dto';
 import { IngestionClientService } from '../../../infra/messaging/ingestion.client';
+
+
+export enum StatusPedido {
+  PENDING = 'PENDING',
+  RECEIVED_BY_INGESTION = 'RECEIVED_BY_INGESTION',
+  FAILED = 'FAILED',
+}
+
+export enum TipoPedido {
+  UPLOAD = 'UPLOAD',
+}
+
 
 @Injectable()
 export class CriarPedidoUploadUseCase {

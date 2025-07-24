@@ -1,7 +1,6 @@
 // tsconfig.json (CORRIGIDO)
 {
   "compilerOptions": {
-    "deleteOutDir": false, // Mude esta linha para false
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
