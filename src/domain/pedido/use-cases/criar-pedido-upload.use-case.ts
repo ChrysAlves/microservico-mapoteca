@@ -57,8 +57,7 @@ export class CriarPedidoUploadUseCase {
   ) {
     this.logger.log(`[BG] Iniciando envio para Ingestão para o pedido ${pedidoId}`);
     try {
-      // A chamada já está correta, pois envia o objeto 'metadados' inteiro,
-      // que contém o 'ra'. O serviço de ingestão irá repassá-lo para a mensagem do Kafka.
+
       await this.ingestionClientService.sendFilesToIngestion(
         files,
         pedidoId,

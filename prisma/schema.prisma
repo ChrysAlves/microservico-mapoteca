@@ -14,7 +14,7 @@ model Pedido {
   status            StatusPedido
   origem            String
   solicitanteId     String?
-  ra                String // ADICIONADO: Campo para o Registro Acadêmico
+  ra                String 
   documentoId       String?
   nomeOriginal      String?
   caminhoMinIO      String?

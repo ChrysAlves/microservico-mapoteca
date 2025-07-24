@@ -1,9 +1,16 @@
+// ARQUIVO: src/infra/http/storage.client.ts
+
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as FormData from 'form-data';
 import { promises as fs } from 'fs';
+import { firstValueFrom } from 'rxjs'; 
+
+export interface PresignedUrlResponse {
+  url: string;
+}
 
 @Injectable()
 export class StorageClient {
@@ -14,7 +21,7 @@ export class StorageClient {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
-    const storageUrl = this.configService.get<string>('STORAGE_SERVICE_URL');
+    const storageUrl = this.configService.get<string>('STORAGE_SERVICE_URL'); 
 
     if (!storageUrl) {
       throw new Error('Variável de ambiente STORAGE_SERVICE_URL não está definida!');
@@ -53,6 +60,23 @@ export class StorageClient {
     } catch (error) {
       this.logger.error(`Erro ao enviar arquivo para o Storage Service: ${error.message}`, error.stack);
       throw new Error('Falha na comunicação com o Microsserviço de Storage.');
+    }
+  }
+
+  async generatePresignedUrl(bucket: string, path: string): Promise<PresignedUrlResponse> {
+    const url = `${this.storageServiceUrl}/storage/generate-url`;
+    const payload = { bucket, path };
+    this.logger.log(`Solicitando URL pré-assinada para ${path} em ${url}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<PresignedUrlResponse>(url, payload),
+      );
+      this.logger.log('URL pré-assinada recebida com sucesso.');
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Erro ao solicitar URL pré-assinada: ${error.message}`, error.stack);
+      throw new Error('Falha na comunicação com o Microsserviço de Storage ao gerar URL.');
     }
   }
 }

@@ -1,19 +1,17 @@
-// src/infra/controllers/mapoteca.controller.ts
-
-import { Controller, Post, Body, UploadedFiles, UseInterceptors, InternalServerErrorException, HttpStatus, HttpCode, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, UploadedFiles, UseInterceptors, InternalServerErrorException, HttpStatus, HttpCode, BadRequestException, Get, Param } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CriarPedidoUploadUseCase } from '../../domain/pedido/use-cases/criar-pedido-upload.use-case';
 import { UploadRequestHttpDto } from '../http/dtos/upload-request.http.dto';
 import { Pedido } from '../../domain/pedido/entities/pedido.entity';
 import { ApiConsumes, ApiBody, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import type { Express } from 'express';
-import { diskStorage } from 'multer'; // Importa o diskStorage
+import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
+import { CriarPedidoDownloadUseCase } from '../../domain/pedido/use-cases/criar-pedido-download.use-case';
 
 const TEMP_UPLOADS_DIR = '/app/temp_uploads';
 
-// Configuração para salvar arquivos temporariamente em disco
 const tempStorage = diskStorage({
   destination: (req, file, cb) => {
     fs.mkdirSync(TEMP_UPLOADS_DIR, { recursive: true });
@@ -30,7 +28,8 @@ const tempStorage = diskStorage({
 export class MapotecaController {
   constructor(
     private readonly criarPedidoUploadUseCase: CriarPedidoUploadUseCase,
-  ) {}
+    private readonly criarPedidoDownloadUseCase: CriarPedidoDownloadUseCase,
+  ) { }
 
   @Post('upload')
   @ApiOperation({ summary: 'Solicita o upload de documentos para preservação.' })
@@ -40,11 +39,9 @@ export class MapotecaController {
     type: UploadRequestHttpDto,
   })
   @ApiResponse({ status: 202, description: 'Pedido de upload recebido.' })
-  // ALTERADO: Usa a nova configuração de armazenamento em disco
   @UseInterceptors(FilesInterceptor('files', 10, { storage: tempStorage }))
   @HttpCode(HttpStatus.ACCEPTED)
   async requestUpload(
-    // O objeto 'file' agora terá a propriedade 'path' em vez de 'buffer'
     @UploadedFiles() files: Array<Express.Multer.File>,
     @Body() body: UploadRequestHttpDto,
   ): Promise<{ message: string; pedidoId: string }> {
@@ -70,5 +67,13 @@ export class MapotecaController {
       console.error('Erro no MapotecaController.requestUpload:', error);
       throw new InternalServerErrorException('Falha ao processar pedido de upload.');
     }
+  }
+
+  @Get(':id/download')
+  @ApiOperation({ summary: 'Obtém uma URL para download de um item preservado.' })
+  @ApiResponse({ status: 200, description: 'URL de download gerada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Item não encontrado.' })
+  async criarPedidoDownload(@Param('id') aipId: string) {
+    return this.criarPedidoDownloadUseCase.execute(aipId);
   }
 }

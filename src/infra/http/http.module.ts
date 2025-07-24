@@ -3,6 +3,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule as AxiosHttpModule } from '@nestjs/axios';
 import { StorageClient } from './storage.client';
+import { GestaoDadosClient } from './gestao-dados.client';
 
 @Module({
   imports: [
@@ -10,7 +11,14 @@ import { StorageClient } from './storage.client';
       timeout: 10000, // 10 segundos de timeout
     }),
   ],
-  providers: [StorageClient],
-  exports: [StorageClient], // Exporta o StorageClient para ser usado em outros módulos
+  providers: [
+    StorageClient,
+    GestaoDadosClient,
+  ],
+
+  exports: [
+    StorageClient,
+    GestaoDadosClient,
+  ], 
 })
 export class HttpModule {}

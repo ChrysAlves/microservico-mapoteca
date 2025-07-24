@@ -8,11 +8,14 @@ import { AtualizarStatusPedidoUseCase } from './use-cases/atualizar-status-pedid
 import { MapotecaController } from '../../infra/controllers/mapoteca.controller';
 import { MessagingModule } from '../../infra/messaging/messaging.module';
 import { DatabaseModule } from '../../infra/database/database.module';
+import { CriarPedidoDownloadUseCase } from './use-cases/criar-pedido-download.use-case';
+import { HttpModule } from 'src/infra/http/http.module';
 
 @Module({
   imports: [
     MessagingModule,
     DatabaseModule,
+    HttpModule,
   ],
   controllers: [
     MapotecaController,
@@ -20,15 +23,16 @@ import { DatabaseModule } from '../../infra/database/database.module';
   providers: [
     CriarPedidoUploadUseCase,
     AtualizarStatusPedidoUseCase,
+    CriarPedidoDownloadUseCase,
     {
       provide: PedidoRepository,
       useClass: PrismaPedidoRepository,
     },
   ],
-  // ADICIONADO: Exporta os use cases para que outros módulos possam injetá-los
   exports: [
     CriarPedidoUploadUseCase,
     AtualizarStatusPedidoUseCase,
+    CriarPedidoDownloadUseCase,
   ],
 })
 export class PedidoModule {}
