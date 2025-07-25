@@ -1,0 +1,47 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Pedido {
+  id                String        @id @default(uuid())
+  tipo              TipoPedido
+  status            StatusPedido
+  origem            String
+  solicitanteId     String?
+  ra                String 
+  documentoId       String?
+  nomeOriginal      String?
+  caminhoMinIO      String?
+  metadadosIniciais Json?
+  mensagemErro      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+
+enum TipoPedido {
+  UPLOAD
+  DOWNLOAD
+  DELETE
+  RENAME
+}
+
+enum StatusPedido {
+  PENDING
+  RECEIVED_BY_INGESTION
+  PROCESSING_STARTED
+  PROCESSED
+  AIP_CREATED_TEMP
+  AIP_UPLOAD_ORDERED
+  AIP_UPLOADED_TO_MINIO
+  COMPLETED
+  FAILED
+  MARKED_FOR_DELETION
+  DELETED_FROM_MINIO
+}

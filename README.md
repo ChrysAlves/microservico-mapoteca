@@ -1,93 +1,228 @@
-# Mapoteca
+# Microsserviço Mapoteca
 
+## 📋 Visão Geral
 
+O **Microsserviço Mapoteca** é o **gerente de projetos central** da arquitetura de preservação digital. Ele atua como o único ponto de entrada para todas as operações do sistema, orquestrando o fluxo completo de preservação digital desde a ingestão até o acesso aos arquivos preservados.
 
-## Getting started
+## 🎯 Função Principal
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+O Mapoteca é responsável por:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- **Receber e gerenciar** todos os pedidos do Front-End (upload, download, deleção, renomeação)
+- **Orquestrar** a comunicação entre todos os microsserviços
+- **Rastrear o status** de cada operação em seu banco de dados próprio
+- **Centralizar o controle** de acesso ao armazenamento MinIO
+- **Garantir a integridade** dos fluxos de preservação digital
 
-## Add your files
+> 💡 **Analogia**: Imagine o Mapoteca como o gerente de uma fábrica digital que recebe todos os pedidos, delega tarefas aos departamentos corretos e acompanha o progresso até a conclusão.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## 🏗️ Arquitetura e Comunicação
+
+### Posição na Arquitetura
 
 ```
-cd existing_repo
-git remote add origin https://versionamento.seduh.df.gov.br/seduh/digeo-seduh/microservices/mapoteca.git
-git branch -M main
-git push -uf origin main
+Front-End → Middleware → 🎯 MAPOTECA → Outros Microsserviços
 ```
 
-## Integrate with your tools
+O Mapoteca é o **único microsserviço** que o Front-End conhece e conversa diretamente.
 
-- [ ] [Set up project integrations](https://versionamento.seduh.df.gov.br/seduh/digeo-seduh/microservices/mapoteca/-/settings/integrations)
+### Microsserviços da Arquitetura
 
-## Collaborate with your team
+#### Node.js/TypeScript (Camada de Orquestração)
+- **🎯 Mapoteca** - Gerente central (este microsserviço)
+- **📥 Ingestão** - Portaria da fábrica
+- **💾 MinIO** - Armazém de arquivos
+- **🔍 Acesso** - Vitrine para consultas
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+#### Python (Camada de Processamento)
+- **⚙️ Processamento** - Departamento de qualidade
+- **📊 Gestão de Dados** - Arquivo central de metadados
+- **📅 Planejamento** - Estratégias de preservação
 
-## Test and Deploy
+## 🔄 Fluxos de Comunicação
 
-Use the built-in continuous integration in GitLab.
+### 1. 📤 Fluxo de Upload (Envio de Arquivos)
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```mermaid
+sequenceDiagram
+    participant FE as Front-End
+    participant MW as Middleware
+    participant MAP as Mapoteca
+    participant ING as Ingestão
+    participant K as Kafka
+    participant PROC as Processamento
+    participant GD as Gestão Dados
+    participant MIN as MinIO
 
-***
+    FE->>MW: Arquivos + metadados
+    MW->>MAP: Requisição HTTP
+    MAP->>ING: Envia arquivos
+    ING->>K: Publica evento
+    K->>PROC: Recebe notificação
+    PROC->>PROC: Processa arquivos
+    PROC->>GD: Envia metadados
+    PROC->>MAP: Notifica processamento concluído
+    MAP->>MIN: Faz upload final
+    MIN->>MAP: Confirma upload
+    MAP->>FE: Status concluído
+```
 
-# Editing this README
+**Como funciona:**
+1. Front-End envia arquivos → Mapoteca
+2. Mapoteca → Ingestão (salva temporariamente)
+3. Ingestão → Kafka (avisa que há arquivos novos)
+4. Processamento recebe aviso → processa os arquivos
+5. Processamento → Gestão de Dados (salva informações)
+6. Processamento → Mapoteca (avisa que terminou)
+7. Mapoteca → MinIO (salva arquivos finais)
+8. Mapoteca atualiza status do pedido
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### 2. 📥 Fluxo de Download (Baixar Arquivos)
 
-## Suggestions for a good README
+```mermaid
+sequenceDiagram
+    participant FE as Front-End
+    participant MAP as Mapoteca
+    participant GD as Gestão Dados
+    participant MIN as MinIO
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+    FE->>MAP: Solicita download
+    MAP->>GD: Busca localização do arquivo
+    GD->>MAP: Retorna dados do arquivo
+    MAP->>MIN: Solicita arquivo
+    MIN->>MAP: Envia arquivo
+    MAP->>FE: Entrega arquivo
+```
 
-## Name
-Choose a self-explaining name for your project.
+**Como funciona:**
+1. Front-End pede um arquivo → Mapoteca
+2. Mapoteca → Gestão de Dados (onde está o arquivo?)
+3. Gestão de Dados → Mapoteca (está aqui!)
+4. Mapoteca → MinIO (me dá o arquivo)
+5. MinIO → Mapoteca (aqui está o arquivo)
+6. Mapoteca → Front-End (entrega o arquivo)
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### 3. 🗑️ Fluxo de Deleção (Apagar Arquivos)
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```mermaid
+sequenceDiagram
+    participant FE as Front-End
+    participant MAP as Mapoteca
+    participant GD as Gestão Dados
+    participant MIN as MinIO
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+    FE->>MAP: Pedido para apagar
+    MAP->>GD: Marca como apagado
+    GD->>MAP: Lista arquivos para deletar
+    MAP->>MIN: Apaga arquivos físicos
+    MIN->>MAP: Confirma que apagou
+    MAP->>GD: Confirma deleção completa
+    GD->>GD: Status: totalmente apagado
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+**Como funciona:**
+1. Front-End pede para apagar → Mapoteca
+2. Mapoteca → Gestão de Dados (marca como "apagado")
+3. Gestão de Dados → Mapoteca (lista quais arquivos apagar)
+4. Mapoteca → MinIO (apaga os arquivos de verdade)
+5. MinIO → Mapoteca (confirmação de que apagou)
+6. Mapoteca → Gestão de Dados (tudo foi apagado)
+7. Sistema atualiza status final
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## 🔗 Protocolos de Comunicação
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### APIs REST (Comunicação Direta)
+- **Front-End ↔ Mapoteca**: Todas as operações
+- **Mapoteca ↔ Ingestão**: Envio de arquivos
+- **Mapoteca ↔ MinIO**: Upload/Download/Delete
+- **Mapoteca ↔ Gestão de Dados**: Consultas de informações
+- **Mapoteca ↔ Acesso**: Coordenação de consultas
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Kafka (Mensagens Assíncronas)
+- **Mapoteca** recebe notificações:
+  - `processing-completed`: Processamento concluído
+  - `processing-failed`: Falha no processamento
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## 🛡️ Restrições de Segurança
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### Controle de Acesso ao MinIO
+- **APENAS o Mapoteca** pode se comunicar com o MinIO
+- Nenhum outro microsserviço tem acesso direto ao armazenamento
+- Centraliza todas as regras de negócio de armazenamento
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### Validações
+- Autenticação de usuários
+- Autorização de operações
+- Validação de integridade de dados
 
-## License
-For open source projects, say how it is licensed.
+## 💾 Banco de Dados
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+O Mapoteca possui seu próprio banco de dados (`mapoteca_db`) com a tabela principal:
+
+### Tabela: Pedidos
+```sql
+- id: UUID (identificador único)
+- tipo: UPLOAD | DOWNLOAD | DELETE | RENAME
+- status: PENDING | PROCESSING | COMPLETED | FAILED
+- usuarioId: string
+- caminhoMinIO: string (localização no storage)
+- mensagemErro: string (em caso de falha)
+- createdAt: timestamp
+- updatedAt: timestamp
+```
+
+## 🚀 Tecnologias
+
+- **Runtime**: Node.js
+- **Framework**: NestJS
+- **Linguagem**: TypeScript
+- **Banco de Dados**: PostgreSQL (via Prisma)
+- **Mensageria**: Kafka
+- **Containerização**: Docker
+
+## 📦 Conceitos de Preservação Digital
+
+### Tipos de Pacotes
+- **Pacote Original**: Arquivos como chegam do usuário
+- **Pacote Preservado**: Arquivos processados e validados
+- **Pacote de Acesso**: Arquivos prontos para consulta pública
+
+### Fluxo de Transformação
+```
+Arquivos Originais → [Processamento] → Arquivos Preservados → [Armazenamento] → Arquivos de Acesso
+```
+
+## 🔧 Configuração e Deploy
+
+### Variáveis de Ambiente
+```env
+DATABASE_URL=postgresql://...
+KAFKA_BROKERS=localhost:9092
+MINIO_ENDPOINT=localhost:9000
+INGESTAO_SERVICE_URL=http://ingestao:3001
+GESTAO_DADOS_SERVICE_URL=http://gestao-dados:3002
+MINIO_SERVICE_URL=http://minio-service:3003
+```
+
+### Docker Compose
+O Mapoteca é orquestrado junto com todos os outros microsserviços via Docker Compose, garantindo a comunicação adequada entre os serviços.
+
+## 📈 Monitoramento e Logs
+
+- Logs estruturados de todas as operações
+- Rastreamento de status de pedidos
+- Métricas de performance
+- Alertas de falhas de comunicação
+
+## 🎯 Benefícios da Arquitetura
+
+1. **Centralização**: Único ponto de controle para o Front-End
+2. **Segurança**: Controle total sobre acesso ao armazenamento
+3. **Escalabilidade**: Cada microsserviço pode escalar independentemente
+4. **Resiliência**: Falhas isoladas não afetam todo o sistema
+5. **Manutenibilidade**: Responsabilidades bem definidas
+
+---
+
+> 💡 **Resumo**: O Mapoteca é o maestro da orquestra de preservação digital, garantindo que cada arquivo seja processado, preservado e disponibilizado de forma segura e eficiente.

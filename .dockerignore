@@ -1,0 +1,8 @@
+# Arquivo: ./.dockerignore
+node_modules
+dist
+npm-debug.log
+.env
+.git
+.gitignore
+.vscode
