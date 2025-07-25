@@ -19,13 +19,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // --- MUDANÇA PRINCIPAL AQUI ---
   // Conecta a aplicação como um consumidor de Kafka
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
       client: {
-        // Acessa a variável de ambiente definida no docker-compose.yml
         brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
       },
       consumer: {
@@ -36,7 +34,7 @@ async function bootstrap() {
 
   // Inicia todos os microserviços (o consumidor Kafka)
   await app.startAllMicroservices();
-  // --- FIM DA MUDANÇA ---
+
   
   await app.listen(3000);
   console.log(`Mapoteca HTTP server está rodando em: ${await app.getUrl()}`);

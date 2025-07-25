@@ -3,7 +3,7 @@ import { PedidoModule } from '../../domain/pedido/pedido.module';
 import { ResultadosProcessamentoController } from './resultados-processamento.controller';
 
 @Module({
-  imports: [PedidoModule], // Importa o PedidoModule para ter acesso aos UseCases
+  imports: [PedidoModule], 
   controllers: [ResultadosProcessamentoController],
 })
 export class ResultadosProcessamentoModule {}

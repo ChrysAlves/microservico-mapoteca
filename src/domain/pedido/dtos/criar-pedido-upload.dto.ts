@@ -8,5 +8,5 @@ export class CriarPedidoUploadDto {
   nomeOriginal?: string;
   metadadosIniciais?: BaseMetadadosIniciais;
   documentoId?: string;
-  ra!: string; // ADICIONADO: Campo para o RA
+  ra!: string; 
 }

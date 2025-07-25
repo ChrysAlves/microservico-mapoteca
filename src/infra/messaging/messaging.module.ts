@@ -7,11 +7,9 @@ import { PedidoModule } from '../../domain/pedido/pedido.module';
 import { IngestionClientService } from './ingestion.client'; // 1. Importe o serviço
 
 @Module({
-  // O forwardRef está correto para evitar dependências circulares
   imports: [forwardRef(() => PedidoModule)], 
   controllers: [ResultadosProcessamentoController],
   providers: [
-    // 2. Adicione o IngestionClientService como um provider
     IngestionClientService,
     {
       provide: 'KAFKA_PRODUCER',
@@ -26,7 +24,6 @@ import { IngestionClientService } from './ingestion.client'; // 1. Importe o ser
       },
     },
   ],
-  // 3. EXPORTE tanto o producer quanto o serviço
   exports: ['KAFKA_PRODUCER', IngestionClientService],
 })
 export class MessagingModule {}

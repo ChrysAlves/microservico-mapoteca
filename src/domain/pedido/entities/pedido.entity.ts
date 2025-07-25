@@ -7,7 +7,7 @@ export class Pedido implements PedidoPrisma {
     status!: StatusPedido;
     origem!: string;
     solicitanteId!: string | null;
-    ra!: string; // ADICIONADO
+    ra!: string; 
     documentoId!: string | null;
     nomeOriginal!: string | null;
     caminhoMinIO!: string | null;
@@ -22,7 +22,7 @@ export class Pedido implements PedidoPrisma {
 
     static create(props: Omit<PedidoPrisma, 'id' | 'createdAt' | 'updatedAt'>): Pedido {
         const defaultProps: PedidoPrisma = {
-            id: '', // O repositório irá gerar o UUID
+            id: '', 
             createdAt: new Date(),
             updatedAt: new Date(),
             ...props,

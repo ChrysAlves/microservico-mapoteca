@@ -5,11 +5,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
-// Interface para definir a forma da resposta que esperamos do serviço
 export interface FileLocationResponse {
   bucket: string;
   path: string;
   filename: string;
+}
+
+export interface FilesToDeleteResponse {
+  message: string;
+  filesToDelete: { bucket: string; path: string }[];
 }
 
 @Injectable()
@@ -40,8 +44,23 @@ export class GestaoDadosClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Erro ao buscar localização para o AIP ${aipId}: ${error.message}`, error.stack);
-      // Repassa o erro para que a camada superior (o UseCase) possa tratá-lo
       throw error;
+    }
+  }
+
+  async logicalDelete(aipId: string): Promise<FilesToDeleteResponse> {
+    const url = `${this.baseURL}/aips/${aipId}/logical-delete`;
+    this.logger.log(`Solicitando deleção lógica para o AIP ${aipId} em ${url}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<FilesToDeleteResponse>(url),
+      );
+      this.logger.log(`Deleção lógica para o AIP ${aipId} confirmada pelo serviço.`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Erro ao solicitar deleção lógica para o AIP ${aipId}: ${error.message}`, error.stack);
+      throw error; 
     }
   }
 }

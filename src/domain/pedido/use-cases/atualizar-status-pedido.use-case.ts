@@ -5,7 +5,6 @@ import { PedidoRepository } from '../repository/pedido.repository';
 import { StatusPedido } from '@prisma/client';
 import { Pedido } from '../entities/pedido.entity';
 
-// Interface para os dados do arquivo de preservação
 export interface PreservacaoData {
   nome: string;
   caminho: string;
@@ -13,7 +12,6 @@ export interface PreservacaoData {
   formato: string;
 }
 
-// CORRIGIDO: Adicionada a propriedade 'preservacaoData'
 export interface AtualizarStatusPedidoPayload {
   pedidoId: string;
   status: StatusPedido;

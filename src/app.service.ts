@@ -1,20 +1,16 @@
-// microservico-mapoteca-v2/src/app.service.ts (CORRIGIDO)
 
 import { Injectable, NotFoundException } from '@nestjs/common';
-// 1. Importe o PrismaService e o enum StatusPedido
 import { PrismaService } from './infra/database/prisma/prisma.service';
-import { StatusPedido } from '@prisma/client'; // ADICIONADO
+import { StatusPedido } from '@prisma/client'; 
 
 @Injectable()
 export class AppService {
-  // 2. Injete o PrismaService no construtor
   constructor(private readonly prisma: PrismaService) {}
 
   getHello(): string {
     return 'Microsserviço Mapoteca está no ar!';
   }
 
-  // 3. CORRIGIDO: O método agora usa o tipo correto 'StatusPedido'
   async updateOrderStatus(transferId: string, newStatus: StatusPedido): Promise<void> {
     try {
       const pedido = await this.prisma.pedido.findUnique({
@@ -30,7 +26,7 @@ export class AppService {
           id: transferId,
         },
         data: {
-          status: newStatus, // Agora os tipos são compatíveis
+          status: newStatus, 
         },
       });
     } catch (error) {

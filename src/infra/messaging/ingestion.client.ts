@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import FormData = require('form-data');
 import axios from 'axios';
 import type { Express } from 'express';
-import * as fs from 'fs'; // Importa o módulo de sistema de arquivos
+import * as fs from 'fs'; 
 
 @Injectable()
 export class IngestionClientService {
@@ -30,7 +30,6 @@ export class IngestionClientService {
     formData.append('metadados', JSON.stringify(metadados));
 
     for (const file of files) {
-      // ALTERADO: Lê o arquivo do disco como um stream
       const fileStream = fs.createReadStream(file.path);
       formData.append('files', fileStream, file.originalname);
     }

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UploadedFiles, UseInterceptors, InternalServerErrorException, HttpStatus, HttpCode, BadRequestException, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, UploadedFiles, UseInterceptors, InternalServerErrorException, HttpStatus, HttpCode, BadRequestException, Get, Param, Delete } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CriarPedidoUploadUseCase } from '../../domain/pedido/use-cases/criar-pedido-upload.use-case';
 import { UploadRequestHttpDto } from '../http/dtos/upload-request.http.dto';
@@ -9,6 +9,7 @@ import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CriarPedidoDownloadUseCase } from '../../domain/pedido/use-cases/criar-pedido-download.use-case';
+import { DeletarItemUseCase } from 'src/domain/pedido/use-cases/deletar-item.use-case';
 
 const TEMP_UPLOADS_DIR = '/app/temp_uploads';
 
@@ -29,6 +30,7 @@ export class MapotecaController {
   constructor(
     private readonly criarPedidoUploadUseCase: CriarPedidoUploadUseCase,
     private readonly criarPedidoDownloadUseCase: CriarPedidoDownloadUseCase,
+    private readonly deletarItemUseCase: DeletarItemUseCase, 
   ) { }
 
   @Post('upload')
@@ -75,5 +77,14 @@ export class MapotecaController {
   @ApiResponse({ status: 404, description: 'Item não encontrado.' })
   async criarPedidoDownload(@Param('id') aipId: string) {
     return this.criarPedidoDownloadUseCase.execute(aipId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Solicita a deleção de um item preservado.' })
+  @ApiResponse({ status: 202, description: 'Pedido de deleção aceito e em processamento.' })
+  @ApiResponse({ status: 404, description: 'Item não encontrado.' })
+  @HttpCode(HttpStatus.ACCEPTED) 
+  async deletarItem(@Param('id') itemId: string) {
+    return this.deletarItemUseCase.execute(itemId);
   }
 }

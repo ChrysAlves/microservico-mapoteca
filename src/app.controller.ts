@@ -1,10 +1,8 @@
-// mapoteca_app/src/app.controller.ts
 
 import { Body, Controller, Get, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { AtualizarStatusPedidoUseCase } from './domain/pedido/use-cases/atualizar-status-pedido.use-case';
 import { StatusPedido } from '@prisma/client';
 
-// DTO para a notificação final
 class FinalStatusDto {
   transferId: string;
   status: 'COMPLETED' | 'FAILED';

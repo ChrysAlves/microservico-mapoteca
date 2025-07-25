@@ -1,4 +1,3 @@
-// ARQUIVO: src/infra/http/storage.client.ts
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
@@ -77,6 +76,25 @@ export class StorageClient {
     } catch (error) {
       this.logger.error(`Erro ao solicitar URL pré-assinada: ${error.message}`, error.stack);
       throw new Error('Falha na comunicação com o Microsserviço de Storage ao gerar URL.');
+    }
+  }
+
+
+
+
+  async deleteFile(bucket: string, path: string): Promise<void> {
+    const url = `${this.storageServiceUrl}/storage/file`;
+    const config = { data: { bucket, path } };
+    this.logger.log(`Solicitando deleção do arquivo ${path} em ${url}`);
+
+    try {
+      await firstValueFrom(
+        this.httpService.delete(url, config),
+      );
+      this.logger.log(`Arquivo ${path} deletado com sucesso via serviço de storage.`);
+    } catch (error) {
+      this.logger.error(`Erro ao solicitar deleção do arquivo: ${error.message}`, error.stack);
+      throw new Error('Falha na comunicação com o Microsserviço de Storage ao deletar arquivo.');
     }
   }
 }

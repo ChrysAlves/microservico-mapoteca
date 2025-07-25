@@ -9,6 +9,7 @@ import { MapotecaController } from '../../infra/controllers/mapoteca.controller'
 import { MessagingModule } from '../../infra/messaging/messaging.module';
 import { DatabaseModule } from '../../infra/database/database.module';
 import { CriarPedidoDownloadUseCase } from './use-cases/criar-pedido-download.use-case';
+import { DeletarItemUseCase } from './use-cases/deletar-item.use-case';
 import { HttpModule } from 'src/infra/http/http.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { HttpModule } from 'src/infra/http/http.module';
     CriarPedidoUploadUseCase,
     AtualizarStatusPedidoUseCase,
     CriarPedidoDownloadUseCase,
+    DeletarItemUseCase,
     {
       provide: PedidoRepository,
       useClass: PrismaPedidoRepository,
@@ -33,6 +35,7 @@ import { HttpModule } from 'src/infra/http/http.module';
     CriarPedidoUploadUseCase,
     AtualizarStatusPedidoUseCase,
     CriarPedidoDownloadUseCase,
+    DeletarItemUseCase,
   ],
 })
 export class PedidoModule {}
