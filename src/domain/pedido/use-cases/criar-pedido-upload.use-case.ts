@@ -1,4 +1,4 @@
-// src/domain/pedido/use-cases/criar-pedido-upload.use-case.ts
+// ARQUIVO: src/domain/pedido/use-cases/criar-pedido-upload.use-case.ts
 
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PedidoRepository } from '../repository/pedido.repository';
@@ -6,7 +6,7 @@ import { Pedido } from '../entities/pedido.entity';
 import type { Express } from 'express';
 import { CriarPedidoUploadDto } from '../dtos/criar-pedido-upload.dto';
 import { IngestionClientService } from '../../../infra/messaging/ingestion.client';
-
+import { v4 as uuidv4 } from 'uuid';
 
 export enum StatusPedido {
   PENDING = 'PENDING',
@@ -17,7 +17,6 @@ export enum StatusPedido {
 export enum TipoPedido {
   UPLOAD = 'UPLOAD',
 }
-
 
 @Injectable()
 export class CriarPedidoUploadUseCase {
@@ -33,46 +32,64 @@ export class CriarPedidoUploadUseCase {
       files: Express.Multer.File[];
       metadados: CriarPedidoUploadDto;
     },
-  ): Promise<Pedido> {
+  ): Promise<{ message: string, pedidosCriados: any[] }> {
     const { files, metadados } = payload;
+    const { ra, origem, solicitanteId, metadadosIniciais } = metadados;
 
-    if (!metadados.ra) {
+    if (!ra) {
       throw new BadRequestException('O campo "ra" é obrigatório.');
     }
 
-    const novoPedido = Pedido.create({
-      tipo: TipoPedido.UPLOAD,
-      status: StatusPedido.PENDING,
-      origem: metadados.origem,
-      ra: metadados.ra,
-      solicitanteId: metadados.solicitanteId ?? null,
-      nomeOriginal: files[0]?.originalname ?? null,
-      metadadosIniciais: metadados.metadadosIniciais ?? null,
-      caminhoMinIO: null,
-      documentoId: null,
-      mensagemErro: null,
-    });
+    const pedidosCriados = [];
 
-    const pedidoSalvo = await this.pedidoRepository.create(novoPedido);
-    this.logger.log(`[CriarPedidoUploadUseCase] Pedido ${pedidoSalvo.id} criado com status PENDING.`);
+    for (const file of files) {
+      const transferId = uuidv4(); 
+      this.logger.log(`Iniciando processo para ${file.originalname} com Transfer ID: ${transferId}`);
+      
+      const novoPedido = Pedido.create({
+        tipo: TipoPedido.UPLOAD,
+        status: StatusPedido.PENDING,
+        origem: origem,
+        ra: ra, 
+        solicitanteId: solicitanteId ?? null,
+        nomeOriginal: file.originalname,
+        metadadosIniciais: metadadosIniciais ?? null,
+        caminhoMinIO: null,
+        documentoId: transferId, 
+        mensagemErro: null,
+      });
 
-    this.iniciarProcessamentoEmBackground(files, metadados, pedidoSalvo.id);
+      const pedidoSalvo = await this.pedidoRepository.create(novoPedido);
+      this.logger.log(`[CriarPedidoUploadUseCase] Pedido individual ${pedidoSalvo.id} criado.`);
 
-    return pedidoSalvo;
+      this.iniciarProcessamentoEmBackground(file, metadados, pedidoSalvo.id, transferId);
+      
+      pedidosCriados.push({
+        arquivoOriginal: file.originalname,
+        pedidoId: pedidoSalvo.id,
+        transferId: transferId,
+      });
+    }
+
+    return {
+      message: `${files.length} pedidos de upload individuais foram iniciados com sucesso.`,
+      pedidosCriados: pedidosCriados,
+    };
   }
 
   private async iniciarProcessamentoEmBackground(
-    files: Express.Multer.File[],
+    file: Express.Multer.File, 
     metadados: CriarPedidoUploadDto,
     pedidoId: string,
+    transferId: string, 
   ) {
     this.logger.log(`[BG] Iniciando envio para Ingestão para o pedido ${pedidoId}`);
     try {
-
       await this.ingestionClientService.sendFilesToIngestion(
-        files,
+        [file], 
         pedidoId,
         metadados,
+        transferId, 
       );
       this.logger.log(`[BG] Chamada ao Microsserviço de Ingestão para pedido ${pedidoId} enviada.`);
       
@@ -80,9 +97,6 @@ export class CriarPedidoUploadUseCase {
       this.logger.log(`[BG] Status do pedido ${pedidoId} atualizado para RECEIVED_BY_INGESTION.`);
 
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      this.logger.error(`[BG] Erro ao acionar Microsserviço de Ingestão para ${pedidoId}:`, error);
-      await this.pedidoRepository.updateStatus(pedidoId, StatusPedido.FAILED, `Falha ao acionar Ingestão: ${errorMessage}`);
     }
   }
 }

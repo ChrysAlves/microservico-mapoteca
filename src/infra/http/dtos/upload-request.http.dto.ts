@@ -13,10 +13,12 @@ export class UploadRequestHttpDto {
     description: 'Um ou mais arquivos para upload.',
     required: true,
   })
-  files!: any[]; // <-- CORREÇÃO AQUI
+  files!: any[]; 
 
 
-  @ApiProperty({ example: '1234567', description: 'Registro Acadêmico do aluno.' })
+  @ApiProperty({ description: 'A Região Administrativa que será usada como pasta.' })
+  @IsString()
+  @IsNotEmpty()
   ra: string;
 
   @ApiProperty({
@@ -25,7 +27,7 @@ export class UploadRequestHttpDto {
   })
   @IsString()
   @IsNotEmpty()
-  origem!: string; // <-- CORREÇÃO AQUI
+  origem!: string; 
 
   @ApiPropertyOptional({
     description: 'ID do usuário ou sistema solicitante.',
@@ -33,7 +35,7 @@ export class UploadRequestHttpDto {
   })
   @IsOptional()
   @IsString()
-  solicitanteId?: string; // Propriedades opcionais com '?' não precisam do '!'
+  solicitanteId?: string; 
 
   @ApiPropertyOptional({
     description: 'String JSON contendo metadados descritivos adicionais.',
@@ -41,5 +43,5 @@ export class UploadRequestHttpDto {
   })
   @IsOptional()
   @IsJSON()
-  metadadosIniciais?: string; // Propriedades opcionais com '?' não precisam do '!'
+  metadadosIniciais?: string; 
 }
