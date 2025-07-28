@@ -30,7 +30,7 @@ services:
 
   ingestao_app:
     build:
-      context: ../microservico-ingestao
+      context: ../ingestao
       dockerfile: Dockerfile
     container_name: ingestao_app
     ports:
@@ -53,11 +53,11 @@ services:
       kafka:
         condition: service_healthy
 
-  processing_app:
+  processamento_app:
     build:
-      context: ../microservico-processamento
+      context: ../processamento
       dockerfile: Dockerfile
-    container_name: processing_app
+    container_name: processamento_app
     environment:
       - KAFKA_BROKER=kafka:29092
     volumes:
@@ -71,7 +71,7 @@ services:
 
   gestao_dados_app:
     build:
-      context: ../microservico-gestao-dados
+      context: ../gestao-dados
       dockerfile: Dockerfile
     container_name: gestao_dados_app
     ports:
@@ -86,7 +86,7 @@ services:
 
   storage_app:
     build:
-      context: ../microservico-minio
+      context: ../minio-mapoteca
       dockerfile: Dockerfile
     container_name: storage_app
     ports:

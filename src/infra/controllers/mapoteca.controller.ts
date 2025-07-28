@@ -40,13 +40,13 @@ export class MapotecaController {
     description: 'Upload de arquivos e metadados.',
     type: UploadRequestHttpDto,
   })
-  @ApiResponse({ status: 202, description: 'Pedido de upload recebido.' })
+  @ApiResponse({ status: 202, description: 'Pedidos de upload recebidos e iniciados.' })
   @UseInterceptors(FilesInterceptor('files', 10, { storage: tempStorage }))
   @HttpCode(HttpStatus.ACCEPTED)
   async requestUpload(
     @UploadedFiles() files: Array<Express.Multer.File>,
     @Body() body: UploadRequestHttpDto,
-  ): Promise<{ message: string; pedidoId: string }> {
+  ): Promise<{ message: string; pedidosCriados: any[] }> { 
     if (!files || files.length === 0) {
       throw new BadRequestException('Nenhum arquivo enviado. O campo "files" é obrigatório.');
     }
@@ -55,22 +55,17 @@ export class MapotecaController {
         ...body,
         metadadosIniciais: body.metadadosIniciais ? JSON.parse(body.metadadosIniciais) : undefined,
       };
-
-      const pedidoCriado: Pedido = await this.criarPedidoUploadUseCase.execute({
+      const resultado = await this.criarPedidoUploadUseCase.execute({
         files: files,
         metadados: parsedBody,
       });
+      return resultado;
 
-      return {
-        message: 'Pedido de upload recebido e processamento iniciado.',
-        pedidoId: pedidoCriado.id,
-      };
     } catch (error) {
       console.error('Erro no MapotecaController.requestUpload:', error);
       throw new InternalServerErrorException('Falha ao processar pedido de upload.');
     }
   }
-
   @Get(':id/download')
   @ApiOperation({ summary: 'Obtém uma URL para download de um item preservado.' })
   @ApiResponse({ status: 200, description: 'URL de download gerada com sucesso.' })

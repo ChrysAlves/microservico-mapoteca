@@ -1,10 +1,11 @@
-// src/infra/messaging/ingestion.client.ts
+// ARQUIVO: src/infra/messaging/ingestion.client.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import FormData = require('form-data');
 import axios from 'axios';
 import type { Express } from 'express';
 import * as fs from 'fs'; 
+import { CriarPedidoUploadDto } from 'src/domain/pedido/dtos/criar-pedido-upload.dto'; // Importe o DTO
 
 @Injectable()
 export class IngestionClientService {
@@ -22,12 +23,20 @@ export class IngestionClientService {
 
   async sendFilesToIngestion(
     files: Express.Multer.File[],
+    pedidoId: string,
+    metadados: CriarPedidoUploadDto, 
     transferId: string,
-    metadados: any,
   ): Promise<any> {
     const formData = new FormData();
-    formData.append('transferId', transferId);
-    formData.append('metadados', JSON.stringify(metadados));
+
+    formData.append('pedidoId', pedidoId); 
+    formData.append('transferId', transferId); 
+    formData.append('ra', metadados.ra);
+    formData.append('origem', metadados.origem);
+    
+    if (metadados.metadadosIniciais) {
+      formData.append('metadadosIniciais', metadados.metadadosIniciais);
+    }
 
     for (const file of files) {
       const fileStream = fs.createReadStream(file.path);
@@ -49,8 +58,8 @@ export class IngestionClientService {
     } catch (error: unknown) {
       console.error('[IngestionClientService] Erro ao enviar para Ingestão.', error);
       let errorMessage = 'Falha na comunicação com o Microsserviço de Ingestão.';
-      if (axios.isAxiosError(error)) {
-        errorMessage = `${errorMessage}: ${error.message}`;
+      if (axios.isAxiosError(error) && error.response) {
+        errorMessage = `${errorMessage}: ${JSON.stringify(error.response.data)}`;
       } else if (error instanceof Error) {
         errorMessage = `${errorMessage}: ${error.message}`;
       }
