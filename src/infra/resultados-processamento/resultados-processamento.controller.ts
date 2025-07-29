@@ -33,7 +33,7 @@ export class ResultadosProcessamentoController {
     const mensagemDeErro = preservacao ? undefined : "Falha na normalização do arquivo.";
 
     await this.atualizarStatusPedidoUseCase.execute({
-      pedidoId: transferId,
+      transferId: transferId,
       status: statusFinal,
       mensagemErro: mensagemDeErro,
       preservacaoData: preservacao, 

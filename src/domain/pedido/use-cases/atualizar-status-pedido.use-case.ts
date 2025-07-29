@@ -3,8 +3,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PedidoRepository } from '../repository/pedido.repository';
 import { StatusPedido } from '@prisma/client';
-import { Pedido } from '../entities/pedido.entity';
 
+// Interface de dados para a preservação (pode manter)
 export interface PreservacaoData {
   nome: string;
   caminho: string;
@@ -12,8 +12,9 @@ export interface PreservacaoData {
   formato: string;
 }
 
+// 1. ATUALIZAMOS O PAYLOAD PARA ESPERAR 'transferId'
 export interface AtualizarStatusPedidoPayload {
-  pedidoId: string;
+  transferId: string; // ALTERADO de pedidoId para transferId
   status: StatusPedido;
   mensagemErro?: string;
   preservacaoData?: PreservacaoData;
@@ -25,23 +26,25 @@ export class AtualizarStatusPedidoUseCase {
 
   constructor(private readonly pedidoRepository: PedidoRepository) {}
 
-  async execute({ pedidoId, status, mensagemErro, preservacaoData }: AtualizarStatusPedidoPayload): Promise<void> {
-    const pedido = await this.pedidoRepository.findById(pedidoId);
+  // 2. SIMPLIFICAMOS O MÉTODO EXECUTE
+  async execute(payload: AtualizarStatusPedidoPayload): Promise<void> {
+    const { transferId, status, mensagemErro } = payload;
+    
+    this.logger.log(`Recebida notificação para atualizar status do Transfer ID ${transferId} para ${status}.`);
 
-    if (!pedido) {
-      this.logger.error(`Pedido com ID ${pedidoId} não encontrado.`);
-      throw new NotFoundException(`Pedido com ID ${pedidoId} não encontrado.`);
+    // Usamos diretamente o novo método do repositório, que é mais eficiente
+    const pedidoAtualizado = await this.pedidoRepository.updateStatusByTransferId(
+      transferId,
+      status,
+      mensagemErro,
+    );
+
+    if (!pedidoAtualizado) {
+      // O repositório agora retorna null se não encontrar, então tratamos o erro aqui.
+      this.logger.error(`Pedido com Transfer ID ${transferId} não encontrado para atualização de status.`);
+      throw new NotFoundException(`Pedido com Transfer ID ${transferId} não encontrado.`);
     }
 
-    pedido.status = status;
-    if (mensagemErro) {
-      pedido.mensagemErro = mensagemErro;
-    }
-    if (preservacaoData) {
-      pedido.caminhoMinIO = preservacaoData.caminho;
-    }
-
-    await this.pedidoRepository.save(pedido);
-    this.logger.log(`Status do pedido ${pedidoId} atualizado para ${status}.`);
+    this.logger.log(`Status do pedido ${pedidoAtualizado.id} (Transfer ID: ${transferId}) atualizado para ${status}.`);
   }
 }

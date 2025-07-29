@@ -28,7 +28,7 @@ export class AppController {
     const finalStatus = payload.status === 'COMPLETED' ? StatusPedido.COMPLETED : StatusPedido.FAILED;
 
     await this.atualizarStatusPedido.execute({
-      pedidoId: payload.transferId,
+      transferId: payload.transferId,
       status: finalStatus,
       mensagemErro: payload.message,
     });

@@ -3,13 +3,12 @@
 import { Injectable } from '@nestjs/common';
 import { PedidoRepository } from '../../../../domain/pedido/repository/pedido.repository';
 import { Pedido as PedidoEntity } from '../../../../domain/pedido/entities/pedido.entity';
-import { StatusPedido, Prisma } from '@prisma/client';
+import { StatusPedido } from '@prisma/client'; // Removido Prisma não utilizado
 import { PrismaPedidoMapper } from '../mappers/prisma-pedido-mapper';
-import { PrismaService } from '../prisma.service'; // Importa o serviço central
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class PrismaPedidoRepository implements PedidoRepository {
-  // CORRIGIDO: Recebemos o PrismaService via injeção de dependência
   constructor(private readonly prisma: PrismaService) {}
 
   async create(pedido: PedidoEntity): Promise<PedidoEntity> {
@@ -56,5 +55,30 @@ export class PrismaPedidoRepository implements PedidoRepository {
       data: updateData,
     });
     return PrismaPedidoMapper.toDomain(updatedPedido);
+  }
+
+  // --- NOVO MÉTODO ADICIONADO AQUI ---
+  async updateStatusByTransferId(transferId: string, newStatus: StatusPedido, errorMessage?: string): Promise<PedidoEntity | null> {
+    // Primeiro, atualizamos todos os pedidos que correspondem ao transferId (deve ser apenas um)
+    const updateResult = await this.prisma.pedido.updateMany({
+      where: { documentoId: transferId },
+      data: {
+        status: newStatus,
+        mensagemErro: errorMessage ?? null,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Se nenhum registro foi atualizado, significa que não encontramos o pedido.
+    if (updateResult.count === 0) {
+      return null;
+    }
+
+    // Buscamos o pedido recém-atualizado para retorná-lo
+    const updatedPedido = await this.prisma.pedido.findFirst({
+      where: { documentoId: transferId },
+    });
+
+    return updatedPedido ? PrismaPedidoMapper.toDomain(updatedPedido) : null;
   }
 }
