@@ -1,73 +1,27 @@
 services:
   mapoteca_app:
     build:
-      context: .
+      context: . 
       dockerfile: Dockerfile
     container_name: mapoteca_app
     ports:
       - "3000:3000"
     volumes:
-      - ./temp_uploads_mapoteca:/app/temp_uploads
-      - sip_storage:/app/temp_ingestao_sip
-      - aip_output:/app/output_normalizado
+      - mapoteca_data_transient:/app/data
+      - sip_storage:/app/temp_ingestao_sip 
     environment:
-      - DATABASE_URL=postgresql://user:password@mapoteca_db:5432/mapoteca_db?schema=public
-      - KAFKA_BROKER=kafka:29092
-      - INGESTION_SERVICE_URL=http://ingestao_app:3001
+      - DATABASE_URL=postgresql://user:password@mapoteca_db_container:5432/mapoteca_db?schema=public
       - STORAGE_SERVICE_URL=http://storage_app:3003
       - GESTAO_DADOS_API_URL=http://gestao_dados_app:8000
+      - REDIS_HOST=redis_cache 
+      - REDIS_PORT=6379
     networks:
       - minha-rede-app
     depends_on:
-      mapoteca_db:
-        condition: service_healthy
-      ingestao_app:
-        condition: service_healthy
-      storage_app:
-        condition: service_started
-      gestao_dados_app:
-        condition: service_started
-
-  ingestao_app:
-    build:
-      context: ../ingestao
-      dockerfile: Dockerfile
-    container_name: ingestao_app
-    ports:
-      - "3001:3001"
-    volumes:
-      # - ../microservico-ingestao:/app
-      # - /app/node_modules
-      - sip_storage:/app/temp_ingestao_sip
-    environment:
-      - KAFKA_BROKER=kafka:29092
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - minha-rede-app
-    depends_on:
-      kafka:
-        condition: service_healthy
-
-  processamento_app:
-    build:
-      context: ../processamento
-      dockerfile: Dockerfile
-    container_name: processamento_app
-    environment:
-      - KAFKA_BROKER=kafka:29092
-    volumes:
-      - sip_storage:/app/temp_ingestao_sip
-      - aip_output:/app/output_normalizado
-    networks:
-      - minha-rede-app
-    depends_on:
-      kafka:
-        condition: service_healthy
+      - mapoteca_db
+      - storage_app
+      - gestao_dados_app
+      - redis
 
   gestao_dados_app:
     build:
@@ -76,13 +30,29 @@ services:
     container_name: gestao_dados_app
     ports:
       - "8000:8000"
+    volumes:
+      - sip_storage:/app/temp_ingestao_sip
+      - aip_output:/app/output_normalizado
     environment:
       - DATABASE_URL=postgresql://user:password@preservacao_db:5432/preservacao_db
+      
+      - POSTGRES_HOST=preservacao_db
+      - POSTGRES_DB=preservacao_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      
+      - MAPOTECA_SERVICE_URL=http://mapoteca_app:3000/internal/processing-complete
+      - STORAGE_SERVICE_URL=http://storage_app:3003/storage/upload
+      - MINIO_SERVICE_API_URL=http://storage_app:3003
+      - REDIS_HOST=redis_cache 
+      - REDIS_PORT=6379
     networks:
       - minha-rede-app
     depends_on:
-      preservacao_db:
-        condition: service_healthy
+      preservacao_db: 
+        condition: service_healthy 
+      redis:
+        condition: service_started
 
   storage_app:
     build:
@@ -95,7 +65,7 @@ services:
       - PORT=3003
       - S3_REGION=us-east-1
       - S3_ENDPOINT=http://minio:9000
-      - MINIO_PUBLIC_URL=http://localhost:9000        
+      - MINIO_PUBLIC_URL=http://localhost:9000       
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
     networks:
@@ -148,7 +118,7 @@ services:
 
   mapoteca_db:
     image: postgres:13-alpine
-    container_name: mapoteca_db
+    container_name: mapoteca_db_container
     ports:
       - "5433:5432"
     environment:
@@ -165,48 +135,12 @@ services:
       timeout: 5s
       retries: 5
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
-    container_name: zookeeper
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
     networks:
       - minha-rede-app
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-
-  kafka:
-    image: confluentinc/cp-kafka:7.0.1
-    container_name: kafka
-    networks:
-      - minha-rede-app
-    depends_on:
-      - zookeeper
-      
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: -1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 40s
-
-    command: >
-      sh -c "
-        echo '>>> Waiting 20 seconds for Zookeeper to be ready...' &&
-        sleep 20 &&
-        echo '>>> Zookeeper should be ready, starting Kafka...' &&
-        /etc/confluent/docker/run
-      "
+    
 
 networks:
   minha-rede-app:
@@ -218,3 +152,4 @@ volumes:
   sip_storage:
   minio_data:
   aip_output:
+  mapoteca_data_transient: {}

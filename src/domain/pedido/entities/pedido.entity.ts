@@ -1,40 +1,42 @@
 // src/domain/pedido/entities/pedido.entity.ts
-import { Pedido as PedidoPrisma, TipoPedido, StatusPedido, Prisma } from '@prisma/client';
+import { tp_pedido as PedidoPrisma, TipoPedido, StatusPedido, Prisma } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
 export class Pedido implements PedidoPrisma {
-    id!: string;
-    tipo!: TipoPedido;
-    status!: StatusPedido;
-    origem!: string;
-    solicitanteId!: string | null;
-    ra!: string; 
-    documentoId!: string | null;
-    nomeOriginal!: string | null;
-    caminhoMinIO!: string | null;
-    metadadosIniciais!: Prisma.JsonValue | null;
-    mensagemErro!: string | null;
-    createdAt!: Date;
-    updatedAt!: Date;
+    cod_id!: string;
+    nom_titulo!: string | null;
+    dsc_tipo!: TipoPedido;
+    dsc_status!: StatusPedido;
+    cod_solicitante!: string | null;
+    nom_ra!: string;
+    cod_pasta!: string | null;
+    cod_documento!: string | null;
+    nom_original!: string | null;
+    dsc_caminho_minio!: string | null;
+    dsc_metadados!: Prisma.JsonValue | null;
+    dsc_mensagem_erro!: string | null;
+    dhs_created!: Date;
+    dhs_updated!: Date;
 
     constructor(props: PedidoPrisma) {
         Object.assign(this, props);
     }
 
-    static create(props: Omit<PedidoPrisma, 'id' | 'createdAt' | 'updatedAt'>): Pedido {
+    static create(props: Omit<PedidoPrisma, 'cod_id' | 'dhs_created' | 'dhs_updated'>): Pedido {
         const defaultProps: PedidoPrisma = {
-            id: '', 
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            cod_id: uuidv4(),
+            dhs_created: new Date(),
+            dhs_updated: new Date(),
             ...props,
         };
         return new Pedido(defaultProps);
     }
 
     public avancarStatus(novoStatus: StatusPedido, mensagem?: string): void {
-        this.status = novoStatus;
+        this.dsc_status = novoStatus;
         if (mensagem) {
-            this.mensagemErro = mensagem;
+            this.dsc_mensagem_erro = mensagem;
         }
-        this.updatedAt = new Date();
+        this.dhs_updated = new Date();
     }
 }

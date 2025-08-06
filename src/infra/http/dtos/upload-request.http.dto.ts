@@ -1,47 +1,26 @@
-// src/infra/http/dtos/upload-request.http.dto.ts
-
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsJSON } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UploadRequestHttpDto {
-  @ApiProperty({
-    type: 'array',
-    items: {
-      type: 'string',
-      format: 'binary',
-    },
-    description: 'Um ou mais arquivos para upload.',
-    required: true,
-  })
-  files!: any[]; 
-
-
-  @ApiProperty({ description: 'A Região Administrativa que será usada como pasta.' })
+  @ApiPropertyOptional({ description: 'O RA (Registro de Arquivo) do item (opcional).' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  ra: string;
+  ra?: string;
 
-  @ApiProperty({
-    description: 'Identificador da origem da requisição (ex: "frontend-web")',
-    example: 'frontend-web',
-  })
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  origem!: string; 
+  solicitanteId?: string;
+
+  @ApiPropertyOptional({ description: 'Metadados iniciais em formato JSON stringificado.' })
+  @IsOptional()
+  @IsString()
+  metadadosIniciais?: string;
 
   @ApiPropertyOptional({
-    description: 'ID do usuário ou sistema solicitante.',
-    example: 'usuario-abc-123',
+    description: 'ID da pasta onde o item será armazenado (opcional).',
   })
   @IsOptional()
   @IsString()
-  solicitanteId?: string; 
-
-  @ApiPropertyOptional({
-    description: 'String JSON contendo metadados descritivos adicionais.',
-    example: '{"descricao": "Contrato 2025", "tags": ["importante"]}',
-  })
-  @IsOptional()
-  @IsJSON()
-  metadadosIniciais?: string; 
+  pastaId?: string;
 }

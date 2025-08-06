@@ -3,7 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import { PedidoRepository } from '../../../../domain/pedido/repository/pedido.repository';
 import { Pedido as PedidoEntity } from '../../../../domain/pedido/entities/pedido.entity';
-import { StatusPedido } from '@prisma/client'; // Removido Prisma não utilizado
+import { StatusPedido } from '@prisma/client';
 import { PrismaPedidoMapper } from '../mappers/prisma-pedido-mapper';
 import { PrismaService } from '../prisma.service';
 
@@ -12,71 +12,60 @@ export class PrismaPedidoRepository implements PedidoRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(pedido: PedidoEntity): Promise<PedidoEntity> {
-    const rawPedido = await this.prisma.pedido.create({
-      data: {
-        tipo: pedido.tipo,
-        status: pedido.status,
-        origem: pedido.origem,
-        solicitanteId: pedido.solicitanteId,
-        ra: pedido.ra,
-        documentoId: pedido.documentoId,
-        nomeOriginal: pedido.nomeOriginal,
-        caminhoMinIO: pedido.caminhoMinIO,
-        metadadosIniciais: pedido.metadadosIniciais ?? null,
-        mensagemErro: pedido.mensagemErro,
-      },
+    const prismaData = PrismaPedidoMapper.toPrisma(pedido);
+
+    const rawPedido = await this.prisma.tp_pedido.create({
+      data: prismaData,
     });
     return PrismaPedidoMapper.toDomain(rawPedido);
   }
 
   async findById(id: string): Promise<PedidoEntity | null> {
-    const pedido = await this.prisma.pedido.findUnique({
-      where: { id },
+    const pedido = await this.prisma.tp_pedido.findUnique({
+      where: { cod_id: id },
     });
     return pedido ? PrismaPedidoMapper.toDomain(pedido) : null;
   }
 
   async updateStatus(id: string, newStatus: StatusPedido, errorMessage?: string): Promise<PedidoEntity> {
-    const updatedPedido = await this.prisma.pedido.update({
-      where: { id },
+    const updatedPedido = await this.prisma.tp_pedido.update({
+      where: { cod_id: id },
       data: {
-        status: newStatus,
-        mensagemErro: errorMessage,
-        updatedAt: new Date(),
+        dsc_status: newStatus,
+        dsc_mensagem_erro: errorMessage,
       },
     });
     return PrismaPedidoMapper.toDomain(updatedPedido);
   }
 
   async save(pedido: PedidoEntity): Promise<PedidoEntity> {
-    const { id, createdAt, ...updateData } = PrismaPedidoMapper.toPrisma(pedido);
-    const updatedPedido = await this.prisma.pedido.update({
-      where: { id: pedido.id },
+    const prismaData = PrismaPedidoMapper.toPrisma(pedido);
+    
+    // Corrigido de hor_created para dhs_created
+    const { cod_id, dhs_created, ...updateData } = prismaData;
+
+    const updatedPedido = await this.prisma.tp_pedido.update({
+      where: { cod_id: pedido.cod_id },
       data: updateData,
     });
     return PrismaPedidoMapper.toDomain(updatedPedido);
   }
 
-  // --- NOVO MÉTODO ADICIONADO AQUI ---
   async updateStatusByTransferId(transferId: string, newStatus: StatusPedido, errorMessage?: string): Promise<PedidoEntity | null> {
-    // Primeiro, atualizamos todos os pedidos que correspondem ao transferId (deve ser apenas um)
-    const updateResult = await this.prisma.pedido.updateMany({
-      where: { documentoId: transferId },
+    const updateResult = await this.prisma.tp_pedido.updateMany({
+      where: { cod_documento: transferId },
       data: {
-        status: newStatus,
-        mensagemErro: errorMessage ?? null,
-        updatedAt: new Date(),
+        dsc_status: newStatus,
+        dsc_mensagem_erro: errorMessage ?? null,
       },
     });
 
-    // Se nenhum registro foi atualizado, significa que não encontramos o pedido.
     if (updateResult.count === 0) {
       return null;
     }
 
-    // Buscamos o pedido recém-atualizado para retorná-lo
-    const updatedPedido = await this.prisma.pedido.findFirst({
-      where: { documentoId: transferId },
+    const updatedPedido = await this.prisma.tp_pedido.findFirst({
+      where: { cod_documento: transferId },
     });
 
     return updatedPedido ? PrismaPedidoMapper.toDomain(updatedPedido) : null;

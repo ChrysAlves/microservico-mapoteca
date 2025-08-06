@@ -13,20 +13,20 @@ export class AppService {
 
   async updateOrderStatus(transferId: string, newStatus: StatusPedido): Promise<void> {
     try {
-      const pedido = await this.prisma.pedido.findUnique({
-        where: { id: transferId },
+      const pedido = await this.prisma.tp_pedido.findUnique({
+        where: { cod_id: transferId },
       });
 
       if (!pedido) {
         throw new NotFoundException(`Pedido com ID ${transferId} não encontrado.`);
       }
 
-      await this.prisma.pedido.update({
+      await this.prisma.tp_pedido.update({
         where: {
-          id: transferId,
+          cod_id: transferId,
         },
         data: {
-          status: newStatus, 
+          dsc_status: newStatus, 
         },
       });
     } catch (error) {

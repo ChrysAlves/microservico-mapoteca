@@ -1,228 +1,319 @@
 # Microsserviço Mapoteca
 
-## 📋 Visão Geral
+## Descrição
 
-O **Microsserviço Mapoteca** é o **gerente de projetos central** da arquitetura de preservação digital. Ele atua como o único ponto de entrada para todas as operações do sistema, orquestrando o fluxo completo de preservação digital desde a ingestão até o acesso aos arquivos preservados.
+Microsserviço responsável pela orquestração central do sistema de preservação digital. Atua como único ponto de entrada para todas as operações do Front-End, coordenando o fluxo completo de preservação desde o upload até o acesso aos arquivos.
 
-## 🎯 Função Principal
+Recebe requisições de upload, download, criação de pastas e outras operações, delegando o processamento para os microsserviços especializados (Gestão de Dados e Storage) e mantendo o controle de status de cada operação em seu banco de dados próprio.
 
-O Mapoteca é responsável por:
+## Características
 
-- **Receber e gerenciar** todos os pedidos do Front-End (upload, download, deleção, renomeação)
-- **Orquestrar** a comunicação entre todos os microsserviços
-- **Rastrear o status** de cada operação em seu banco de dados próprio
-- **Centralizar o controle** de acesso ao armazenamento MinIO
-- **Garantir a integridade** dos fluxos de preservação digital
+- Orquestração de microsserviços
+- Controle de status de operações
+- Cache Redis
+- Integração com Storage e Gestão de Dados
 
-> 💡 **Analogia**: Imagine o Mapoteca como o gerente de uma fábrica digital que recebe todos os pedidos, delega tarefas aos departamentos corretos e acompanha o progresso até a conclusão.
+## Tecnologias
 
-## 🏗️ Arquitetura e Comunicação
+- Node.js/NestJS
+- TypeScript
+- PostgreSQL
+- Redis
+- Docker
 
-### Posição na Arquitetura
+## Arquitetura
 
+```mermaid
+graph TB
+    FE[Front-End] --> MAP[Mapoteca :3000]
+    MAP --> GD[Gestão Dados :8000]
+    MAP --> ST[Storage :3003]
+    MAP --> MDB[(Mapoteca DB :5433)]
+    MAP --> REDIS[(Redis)]
+    
+    GD --> PDB[(Preservação DB :5434)]
+    ST --> MINIO[(MinIO :9000)]
 ```
-Front-End → Middleware → 🎯 MAPOTECA → Outros Microsserviços
+
+## Fluxos
+
+### Upload
 ```
-
-O Mapoteca é o **único microsserviço** que o Front-End conhece e conversa diretamente.
-
-### Microsserviços da Arquitetura
-
-#### Node.js/TypeScript (Camada de Orquestração)
-- **🎯 Mapoteca** - Gerente central (este microsserviço)
-- **📥 Ingestão** - Portaria da fábrica
-- **💾 MinIO** - Armazém de arquivos
-- **🔍 Acesso** - Vitrine para consultas
-
-#### Python (Camada de Processamento)
-- **⚙️ Processamento** - Departamento de qualidade
-- **📊 Gestão de Dados** - Arquivo central de metadados
-- **📅 Planejamento** - Estratégias de preservação
-
-## 🔄 Fluxos de Comunicação
-
-### 1. 📤 Fluxo de Upload (Envio de Arquivos)
+🌐 Front-End  🎯 Mapoteca  📊 Gestão   💾 Storage  📦 MinIO
+     │           │        Dados         │          │
+     │──────────▶│          │           │          │
+     │ 📤 upload │          │           │          │
+     │           │─────────▶│           │          │
+     │           │ 🔄 process│           │          │
+     │           │          │──────────▶│          │
+     │           │          │ ⬆️ upload │          │
+     │           │          │           │─────────▶│
+     │           │          │           │ 💾 store │
+     │           │◀─────────│           │          │
+     │           │ ✅ done  │           │          │
+     │◀──────────│          │           │          │
+     │ ✅ status │          │           │          │
+```
 
 ```mermaid
 sequenceDiagram
-    participant FE as Front-End
-    participant MW as Middleware
-    participant MAP as Mapoteca
-    participant ING as Ingestão
-    participant K as Kafka
-    participant PROC as Processamento
-    participant GD as Gestão Dados
-    participant MIN as MinIO
-
-    FE->>MW: Arquivos + metadados
-    MW->>MAP: Requisição HTTP
-    MAP->>ING: Envia arquivos
-    ING->>K: Publica evento
-    K->>PROC: Recebe notificação
-    PROC->>PROC: Processa arquivos
-    PROC->>GD: Envia metadados
-    PROC->>MAP: Notifica processamento concluído
-    MAP->>MIN: Faz upload final
-    MIN->>MAP: Confirma upload
-    MAP->>FE: Status concluído
+    FE->>MAP: Upload + metadados
+    MAP->>GD: Processa arquivos
+    GD->>ST: Upload processados
+    ST->>MINIO: Armazena
+    GD-->>MAP: Callback concluído
+    MAP-->>FE: Status final
 ```
 
-**Como funciona:**
-1. Front-End envia arquivos → Mapoteca
-2. Mapoteca → Ingestão (salva temporariamente)
-3. Ingestão → Kafka (avisa que há arquivos novos)
-4. Processamento recebe aviso → processa os arquivos
-5. Processamento → Gestão de Dados (salva informações)
-6. Processamento → Mapoteca (avisa que terminou)
-7. Mapoteca → MinIO (salva arquivos finais)
-8. Mapoteca atualiza status do pedido
-
-### 2. 📥 Fluxo de Download (Baixar Arquivos)
+### Download
+```
+🌐 Front-End  🎯 Mapoteca  📊 Gestão   💾 Storage  📦 MinIO
+     │           │        Dados         │          │
+     │──────────▶│          │           │          │
+     │ 📥 request│          │           │          │
+     │           │─────────▶│           │          │
+     │           │ 🔍 locate│           │          │
+     │           │◀─────────│           │          │
+     │           │ 📍 path  │           │          │
+     │           │──────────────────────▶│          │
+     │           │        📄 get        │          │
+     │           │          │           │─────────▶│
+     │           │          │           │ 📦 fetch │
+     │           │          │           │◀─────────│
+     │           │          │           │ 📄 file  │
+     │           │◀──────────────────────│          │
+     │           │        📄 return     │          │
+     │◀──────────│          │           │          │
+     │ 📄 arquivo│          │           │          │
+```
 
 ```mermaid
 sequenceDiagram
-    participant FE as Front-End
-    participant MAP as Mapoteca
-    participant GD as Gestão Dados
-    participant MIN as MinIO
-
     FE->>MAP: Solicita download
-    MAP->>GD: Busca localização do arquivo
-    GD->>MAP: Retorna dados do arquivo
-    MAP->>MIN: Solicita arquivo
-    MIN->>MAP: Envia arquivo
-    MAP->>FE: Entrega arquivo
+    MAP->>GD: Busca localização
+    MAP->>ST: Solicita arquivo
+    ST->>MINIO: Busca arquivo
+    ST-->>MAP: Retorna arquivo
+    MAP-->>FE: Entrega arquivo
 ```
 
-**Como funciona:**
-1. Front-End pede um arquivo → Mapoteca
-2. Mapoteca → Gestão de Dados (onde está o arquivo?)
-3. Gestão de Dados → Mapoteca (está aqui!)
-4. Mapoteca → MinIO (me dá o arquivo)
-5. MinIO → Mapoteca (aqui está o arquivo)
-6. Mapoteca → Front-End (entrega o arquivo)
+### Delete
+```
+🌐 Front-End  🎯 Mapoteca  📊 Gestão   💾 Storage  📦 MinIO
+     │           │        Dados         │          │
+     │──────────▶│          │           │          │
+     │ 🗑️ delete │          │           │          │
+     │           │─────────▶│           │          │
+     │           │ ❌ mark  │           │          │
+     │           │◀─────────│           │          │
+     │           │ 📋 list  │           │          │
+     │           │──────────────────────▶│          │
+     │           │        🗑️ delete     │          │
+     │           │          │           │─────────▶│
+     │           │          │           │ ❌ remove│
+     │           │          │           │◀─────────│
+     │           │          │           │ ✅ done  │
+     │           │◀──────────────────────│          │
+     │           │        ✅ confirm    │          │
+     │◀──────────│          │           │          │
+     │ ✅ deleted│          │           │          │
+```
 
-### 3. 🗑️ Fluxo de Deleção (Apagar Arquivos)
+### Criar Pasta
+```
+🌐 Front-End  🎯 Mapoteca  📊 Gestão
+     │           │        Dados
+     │──────────▶│          │
+     │ 📁 create │          │
+     │           │─────────▶│
+     │           │ 🆕 new   │
+     │           │◀─────────│
+     │           │ ✅ created
+     │◀──────────│          │
+     │ ✅ pasta  │          │
+```
+
+### Listar Pastas
+```
+🌐 Front-End  🎯 Mapoteca  📊 Gestão
+     │           │        Dados
+     │──────────▶│          │
+     │ 📋 list   │          │
+     │           │─────────▶│
+     │           │ 🔍 query │
+     │           │◀─────────│
+     │           │ 📋 folders
+     │◀──────────│          │
+     │ 📋 lista  │          │
+```
+
+### Renomear Pasta
+```
+🌐 Front-End  🎯 Mapoteca  📊 Gestão   💾 Storage  📦 MinIO
+     │           │        Dados         │          │
+     │──────────▶│          │           │          │
+     │ ✏️ rename │          │           │          │
+     │           │─────────▶│           │          │
+     │           │ 🔄 update│           │          │
+     │           │◀─────────│           │          │
+     │           │ 📋 moves │           │          │
+     │           │──────────────────────▶│          │
+     │           │        🔄 move       │          │
+     │           │          │           │─────────▶│
+     │           │          │           │ 📁 rename│
+     │           │          │           │◀─────────│
+     │           │          │           │ ✅ moved │
+     │           │◀──────────────────────│          │
+     │           │        ✅ confirm    │          │
+     │◀──────────│          │           │          │
+     │ ✅ renamed│          │           │          │
+```
+
+### Deletar Pasta
+```
+🌐 Front-End  🎯 Mapoteca  📊 Gestão   💾 Storage  📦 MinIO
+     │           │        Dados         │          │
+     │──────────▶│          │           │          │
+     │ 🗑️ delete │          │           │          │
+     │           │─────────▶│           │          │
+     │           │ ❌ cascade│           │          │
+     │           │◀─────────│           │          │
+     │           │ 📋 files │           │          │
+     │           │──────────────────────▶│          │
+     │           │        🗑️ delete     │          │
+     │           │          │           │─────────▶│
+     │           │          │           │ ❌ remove│
+     │           │          │           │◀─────────│
+     │           │          │           │ ✅ done  │
+     │           │◀──────────────────────│          │
+     │           │        ✅ confirm    │          │
+     │◀──────────│          │           │          │
+     │ ✅ deleted│          │           │          │
+```
+
+## API Endpoints
+
+### Pedidos (Arquivos)
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/pedidos/upload` | Upload de arquivos |
+| GET | `/pedidos/{id}/download` | Download de arquivo |
+| GET | `/pedidos/{id}` | Detalhes do item |
+| GET | `/pedidos` | Lista todos os itens |
+| PUT | `/pedidos/{id}/rename` | Renomeia item |
+| DELETE | `/pedidos/{id}` | Remove item |
+
+### Pastas
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/pastas` | Cria nova pasta |
+| GET | `/pastas` | Lista todas as pastas |
+| GET | `/pastas/{id}` | Conteúdo da pasta |
+| PUT | `/pastas/{id}` | Renomeia pasta |
+| DELETE | `/pastas/{id}` | Remove pasta |
+
+## Modelo de Dados
 
 ```mermaid
-sequenceDiagram
-    participant FE as Front-End
-    participant MAP as Mapoteca
-    participant GD as Gestão Dados
-    participant MIN as MinIO
-
-    FE->>MAP: Pedido para apagar
-    MAP->>GD: Marca como apagado
-    GD->>MAP: Lista arquivos para deletar
-    MAP->>MIN: Apaga arquivos físicos
-    MIN->>MAP: Confirma que apagou
-    MAP->>GD: Confirma deleção completa
-    GD->>GD: Status: totalmente apagado
+erDiagram
+    OPERATION {
+        string id PK
+        string type
+        string status
+        datetime created_at
+        json metadata
+    }
+    
+    FILE_REFERENCE {
+        string id PK
+        string operation_id FK
+        string original_name
+        string preserved_path
+        string checksum
+    }
+    
+    OPERATION ||--o{ FILE_REFERENCE : contains
 ```
 
-**Como funciona:**
-1. Front-End pede para apagar → Mapoteca
-2. Mapoteca → Gestão de Dados (marca como "apagado")
-3. Gestão de Dados → Mapoteca (lista quais arquivos apagar)
-4. Mapoteca → MinIO (apaga os arquivos de verdade)
-5. MinIO → Mapoteca (confirmação de que apagou)
-6. Mapoteca → Gestão de Dados (tudo foi apagado)
-7. Sistema atualiza status final
-
-
-## 🔗 Protocolos de Comunicação
-
-### APIs REST (Comunicação Direta)
-- **Front-End ↔ Mapoteca**: Todas as operações
-- **Mapoteca ↔ Ingestão**: Envio de arquivos
-- **Mapoteca ↔ MinIO**: Upload/Download/Delete
-- **Mapoteca ↔ Gestão de Dados**: Consultas de informações
-- **Mapoteca ↔ Acesso**: Coordenação de consultas
-
-### Kafka (Mensagens Assíncronas)
-- **Mapoteca** recebe notificações:
-  - `processing-completed`: Processamento concluído
-  - `processing-failed`: Falha no processamento
-
-## 🛡️ Restrições de Segurança
-
-### Controle de Acesso ao MinIO
-- **APENAS o Mapoteca** pode se comunicar com o MinIO
-- Nenhum outro microsserviço tem acesso direto ao armazenamento
-- Centraliza todas as regras de negócio de armazenamento
-
-### Validações
-- Autenticação de usuários
-- Autorização de operações
-- Validação de integridade de dados
-
-## 💾 Banco de Dados
-
-O Mapoteca possui seu próprio banco de dados (`mapoteca_db`) com a tabela principal:
-
-### Tabela: Pedidos
-```sql
-- id: UUID (identificador único)
-- tipo: UPLOAD | DOWNLOAD | DELETE | RENAME
-- status: PENDING | PROCESSING | COMPLETED | FAILED
-- usuarioId: string
-- caminhoMinIO: string (localização no storage)
-- mensagemErro: string (em caso de falha)
-- createdAt: timestamp
-- updatedAt: timestamp
-```
-
-## 🚀 Tecnologias
-
-- **Runtime**: Node.js
-- **Framework**: NestJS
-- **Linguagem**: TypeScript
-- **Banco de Dados**: PostgreSQL (via Prisma)
-- **Mensageria**: Kafka
-- **Containerização**: Docker
-
-## 📦 Conceitos de Preservação Digital
-
-### Tipos de Pacotes
-- **Pacote Original**: Arquivos como chegam do usuário
-- **Pacote Preservado**: Arquivos processados e validados
-- **Pacote de Acesso**: Arquivos prontos para consulta pública
-
-### Fluxo de Transformação
-```
-Arquivos Originais → [Processamento] → Arquivos Preservados → [Armazenamento] → Arquivos de Acesso
-```
-
-## 🔧 Configuração e Deploy
+## Configuração
 
 ### Variáveis de Ambiente
 ```env
-DATABASE_URL=postgresql://...
-KAFKA_BROKERS=localhost:9092
-MINIO_ENDPOINT=localhost:9000
-INGESTAO_SERVICE_URL=http://ingestao:3001
-GESTAO_DADOS_SERVICE_URL=http://gestao-dados:3002
-MINIO_SERVICE_URL=http://minio-service:3003
+DATABASE_URL=postgresql://user:password@mapoteca_db_container:5432/mapoteca_db
+STORAGE_SERVICE_URL=http://storage_app:3003
+GESTAO_DADOS_API_URL=http://gestao_dados_app:8000
+REDIS_HOST=redis_cache
+REDIS_PORT=6379
 ```
 
-### Docker Compose
-O Mapoteca é orquestrado junto com todos os outros microsserviços via Docker Compose, garantindo a comunicação adequada entre os serviços.
+### Docker
+```bash
+docker-compose up -d mapoteca_app
+```
 
-## 📈 Monitoramento e Logs
+## Execução
 
-- Logs estruturados de todas as operações
-- Rastreamento de status de pedidos
-- Métricas de performance
-- Alertas de falhas de comunicação
+### Desenvolvimento
+```bash
+npm install
+npx prisma migrate dev
+npm run start:dev
+```
 
-## 🎯 Benefícios da Arquitetura
+### Produção
+```bash
+docker-compose up -d
+```
 
-1. **Centralização**: Único ponto de controle para o Front-End
-2. **Segurança**: Controle total sobre acesso ao armazenamento
-3. **Escalabilidade**: Cada microsserviço pode escalar independentemente
-4. **Resiliência**: Falhas isoladas não afetam todo o sistema
-5. **Manutenibilidade**: Responsabilidades bem definidas
+## Fluxo de Processamento
 
----
+```
+    🚀 INÍCIO
+       │
+       ▼
+┌─────────────────┐
+│ 📨 Recebe HTTP  │
+└─────────┬───────┘
+          │
+          ▼
+     ❓ Válido?
+      ╱       ╲
+   Sim╱         ╲Não
+     ╱           ╲
+    ▼             ▼
+┌─────────────┐ ┌─────────────┐
+│ 💾 Registra │ │ ❌ Erro     │
+│  operação   │ │   HTTP      │
+└─────┬───────┘ └─────────────┘
+      │
+      ▼
+┌─────────────┐
+│ 🔄 Delega   │
+│microsserviço│
+└─────┬───────┘
+      │
+      ▼
+  📊 Processa?
+    ╱       ╲
+ OK╱         ╲Erro
+  ╱           ╲
+ ▼             ▼
+┌─────────────┐ ┌─────────────┐
+│ ✅ Atualiza │ │ ❌ Atualiza │
+│  completed  │ │   failed    │
+└─────┬───────┘ └─────┬───────┘
+      │               │
+      └───────┬───────┘
+              ▼
+        ┌─────────────┐
+        │ 📢 Notifica │
+        │  Front-End  │
+        └─────────────┘
+```
 
-> 💡 **Resumo**: O Mapoteca é o maestro da orquestra de preservação digital, garantindo que cada arquivo seja processado, preservado e disponibilizado de forma segura e eficiente.
+## Monitoramento
+
+- Health check: `GET /health`
+- Logs estruturados
+- Métricas via Redis
+- Interface MinIO: http://localhost:9001

@@ -1,4 +1,4 @@
-// src/infra/http/http.module.ts
+// Em src/infra/http/http.module.ts
 
 import { Module } from '@nestjs/common';
 import { HttpModule as AxiosHttpModule } from '@nestjs/axios';
@@ -15,8 +15,8 @@ import { GestaoDadosClient } from './gestao-dados.client';
     StorageClient,
     GestaoDadosClient,
   ],
-
   exports: [
+    AxiosHttpModule, 
     StorageClient,
     GestaoDadosClient,
   ], 

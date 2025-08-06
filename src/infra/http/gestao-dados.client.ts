@@ -1,4 +1,3 @@
-// ARQUIVO: src/infra/http/gestao-dados.client.ts
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
@@ -14,6 +13,23 @@ export interface FileLocationResponse {
 export interface FilesToDeleteResponse {
   message: string;
   filesToDelete: { bucket: string; path: string }[];
+}
+
+
+export interface FileDetails {
+  id: number;
+  nome: string;
+  formato: string;
+  tipo: string;
+  tamanho_bytes: number;
+  ultima_modificacao: Date;
+}
+
+export interface AipDetailsResponse {
+  transfer_id: string;
+  titulo: string | null;
+  data_criacao: Date;
+  arquivos: FileDetails[];
 }
 
 @Injectable()
@@ -60,7 +76,58 @@ export class GestaoDadosClient {
       return response.data;
     } catch (error) {
       this.logger.error(`Erro ao solicitar deleção lógica para o AIP ${aipId}: ${error.message}`, error.stack);
-      throw error; 
+      throw error;
+    }
+  }
+
+  async renameAip(aipId: string, novoTitulo: string): Promise<{ message: string; novo_titulo: string }> {
+    const url = `${this.baseURL}/aips/${aipId}/rename`;
+    const payload = { novo_titulo: novoTitulo };
+
+    this.logger.log(`Solicitando renomeação do AIP ${aipId} para "${novoTitulo}" em ${url}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.put<{ message: string; novo_titulo: string }>(url, payload),
+      );
+      this.logger.log(`AIP ${aipId} renomeado com sucesso via serviço de Gestão de Dados.`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Erro ao solicitar renomeação para o AIP ${aipId}: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  async getAipDetails(aipId: string): Promise<AipDetailsResponse> {
+    const url = `${this.baseURL}/aips/${aipId}/details`;
+    this.logger.log(`Buscando detalhes completos do AIP ${aipId} em ${url}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<AipDetailsResponse>(url),
+      );
+      this.logger.log(`Detalhes recebidos para o AIP ${aipId}.`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Erro ao buscar detalhes para o AIP ${aipId}: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+
+  async findAllAips(): Promise<AipDetailsResponse[]> {
+    const url = `${this.baseURL}/aips`;
+    this.logger.log(`Buscando todos os AIPs em ${url}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<AipDetailsResponse[]>(url),
+      );
+      this.logger.log(`Recebidos ${response.data.length} AIPs do serviço de Gestão de Dados.`);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Erro ao buscar todos os AIPs: ${error.message}`, error.stack);
+      throw error;
     }
   }
 }

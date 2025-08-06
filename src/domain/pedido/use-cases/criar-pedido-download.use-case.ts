@@ -16,7 +16,7 @@ export class CriarPedidoDownloadUseCase {
   constructor(
     private readonly gestaoDadosClient: GestaoDadosClient,
     private readonly storageClient: StorageClient,
-  ) {}
+  ) { }
 
   async execute(aipId: string): Promise<DownloadInfo> {
     this.logger.log(`Iniciando fluxo de download para o AIP ID: ${aipId}`);
@@ -25,9 +25,13 @@ export class CriarPedidoDownloadUseCase {
       const location = await this.gestaoDadosClient.getLocation(aipId);
       this.logger.log(`Localização encontrada: bucket=${location.bucket}, path=${location.path}`);
 
+      this.logger.log(`DEBUG-FILENAME: Recebido do Gestão de Dados -> ${location.filename}`); // <-- ADICIONE AQUI
+
+
       const presignedUrlResponse = await this.storageClient.generatePresignedUrl(
         location.bucket,
         location.path,
+        location.filename,
       );
       this.logger.log(`URL pré-assinada gerada com sucesso.`);
 
@@ -37,11 +41,11 @@ export class CriarPedidoDownloadUseCase {
       };
     } catch (error) {
       this.logger.error(`Falha no fluxo de download para o AIP ID ${aipId}: ${error.message}`, error.stack);
-      
+
       if (error.response?.status === 404) {
         throw new NotFoundException(`O item com ID ${aipId} ou seu arquivo correspondente não foi encontrado.`);
       }
-      
+
       throw new Error('Ocorreu uma falha ao processar o pedido de download.');
     }
   }

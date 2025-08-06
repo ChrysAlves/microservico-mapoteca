@@ -8,20 +8,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Pedido {
-  id                String        @id @default(uuid())
-  tipo              TipoPedido
-  status            StatusPedido
-  origem            String
-  solicitanteId     String?
-  ra                String 
-  documentoId       String?
-  nomeOriginal      String?
-  caminhoMinIO      String?
-  metadadosIniciais Json?
-  mensagemErro      String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+model tp_pedido {
+  cod_id              String        @id @default(uuid())
+  nom_titulo          String?   
+  dsc_tipo            TipoPedido
+  dsc_status          StatusPedido
+  cod_solicitante     String?
+  nom_ra              String?
+  cod_pasta           String? 
+  cod_documento       String?
+  nom_original        String?
+  dsc_caminho_minio   String?
+  dsc_metadados       Json?
+  dsc_mensagem_erro   String?
+  dhs_created         DateTime      @default(now())
+  dhs_updated         DateTime      @updatedAt
 }
 
 
@@ -44,4 +45,5 @@ enum StatusPedido {
   FAILED
   MARKED_FOR_DELETION
   DELETED_FROM_MINIO
+  QUEUED_FOR_PROCESSING
 }
